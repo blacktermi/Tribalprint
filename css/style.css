@@ -265,7 +265,7 @@ h2 {
 @media (min-width: 768px) {
     .nav,
     .nav .navbar {
-        background: #009E79 !important;
+        background: #000000 !important;
     }
     
     .nav .navbar-brand {
@@ -1872,7 +1872,7 @@ h2 {
 .call-to-action {
     position: relative;
     padding: 30px 0;
-    background: #009E79;
+    background: #000000;
 }
 
 .call-to-action .col-md-6:last-child {
@@ -1919,7 +1919,7 @@ h2 {
 .newsletter {
     position: relative;
     padding: 30px 0;
-    background: #009E79;
+    background: #000000;
 }
 
 .newsletter h1 {
