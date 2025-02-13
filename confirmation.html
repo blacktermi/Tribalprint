@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmation de soumission</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+        }
+        .confirmation-box {
+            background: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            animation: fadeIn 1s ease-in-out;
+        }
+        .confirmation-box h2 {
+            color: #4CAF50;
+        }
+        .confirmation-box p {
+            color: #333;
+            font-size: 18px;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="confirmation-box">
+        <h2>Commande bien reçue ! 🎉</h2>
+        <p>Votre commande a bien été enregistrée.</p>
+        <p>Vous allez être redirigé vers la page d'accueil...</p>
+    </div>
+    <script>
+        setTimeout(function() {
+            window.location.href = "https://tribalprint.ci"; // Remplace par l'URL souhaitée
+        }, 5000); // Redirection après 5 secondes
+    </script>
+</body>
+</html>
