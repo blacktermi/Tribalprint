@@ -1,13 +1,17 @@
 /**********************************/
 /********** General CSS ***********/
 /**********************************/
+/* 🌟 Importation de la police Montserrat */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700;900&display=swap');
+
 body {
     color: #353535;
-    font-family: 'Open Sans', sans-serif;
+    font-family: 'Montserrat', sans-serif;
     font-weight: 400;
     background: #f3f6ff;
 }
 
+/* 🔗 Liens */
 a {
     color: #009E79;
 }
@@ -20,22 +24,25 @@ a:focus {
     text-decoration: none;
 }
 
+/* 🏆 Titres */
 h1 {
-    font-family: 'Source Code Pro', monospace;
+    font-family: 'Montserrat', sans-serif;
     font-weight: 900;
 }
 
 h2 {
-    font-family: 'Source Code Pro', monospace;
+    font-family: 'Montserrat', sans-serif;
     font-weight: 700;
 }
 
+/* 📏 Responsive container */
 @media(min-width: 992px) {
     .container-fluid {
         padding-right: 60px;
         padding-left: 60px;
     }
 }
+
 
 
 /**********************************/
@@ -234,72 +241,137 @@ h2 {
 /**********************************/
 /*********** Nav Bar CSS **********/
 /**********************************/
+/* 🌟 Styles généraux */
 .nav {
     position: relative;
+    background: #000000; /* Fond noir */
+    box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.2);
+    padding: 10px 0;
+    transition: all 0.3s ease-in-out;
+    border
 }
 
+/* 📍 Container centré */
 @media (min-width: 992px) {
     .nav .container-fluid {
-        padding-left: 52px;
-        padding-right: 52px;
+        padding-left: 40px;
+        padding-right: 40px;
+        display: flex;
+        justify-content: center;
     }
 }
 
 .nav .navbar {
     height: 100%;
     padding: 0;
+    
 }
 
+/* 🔥 Tribal Print centré et en Montserrat Black */
+.nav .navbar-brand {
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: #fff !important;
+    font-family: 'Montserrat Black', sans-serif;
+    text-align: center;
+    flex-grow: 1;
+}
+
+/* 🎨 Style des liens */
+.nav .navbar-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.nav .navbar-nav .nav-link {
+    color: #ffffff !important;
+    font-size: 0.9rem;
+    padding: 10px 12px;
+    text-transform: uppercase;
+    transition: all 0.3s ease-in-out;
+}
+
+/* ✨ Effet au survol et lien actif */
+.nav .navbar-nav .nav-link:hover,
+.nav .navbar-nav .nav-link.active {
+    background: #A0522D; /* Marron clair */
+    border-radius: 5px;
+    color: #fff !important;
+}
+
+/* 📂 Dropdown Menu */
 .nav .dropdown-menu {
-    margin-top: 0;
-    border: 0;
-    border-radius: 0;
-    background: #009E79;
+    background: #8B4513; /* Marron foncé */
+    border: none;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    margin-top: 5px;
+    padding: 10px 0;
+    min-width: 180px;
+    text-align: center;
 }
 
-.nav .dropdown-menu a.active {
-    color: #353535;
-    background: #f8f9fa;
+/* 🖱️ Éléments du menu déroulant */
+.nav .dropdown-item {
+    color: #ffffff !important;
+    background: transparent;
+    padding: 8px 12px;
+    transition: all 0.3s ease-in-out;
 }
 
-@media (min-width: 768px) {
-    .nav,
-    .nav .navbar {
-        background: #000000 !important;
-    }
-    
-    .nav .navbar-brand {
-        display: none;
-    }
-    
-    .nav .navbar-dark a.nav-link {
-        color: #ffffff;
-        font-size: 14px;
-        text-transform: uppercase;
-    }
-    
-    .nav .navbar-dark a.nav-link:hover,
-    .nav .navbar-dark a.nav-link.active {
-        color: #000000;
-    }
+/* 🏆 Effet au survol */
+.nav .dropdown-item:hover {
+    background: #A0522D;
+    border-radius: 5px;
+    color: #ffffff !important;
 }
 
+/* 📱 Mobile Version */
 @media (max-width: 768px) {
     .nav {
-        padding: 5px 0;
+        padding: 8px 0;
+        background: #8B4513 !important; /* Fond marron */
     }
-    
-    .nav,
+
     .nav .navbar {
-        background: #000000 !important;
+        background: #8B4513 !important;
     }
-    
-    .nav a.nav-link {
-        padding: 5px 0;
+
+    .nav .navbar-brand {
+        font-size: 1.2rem;
+        font-weight: bold;
+        font-family: 'Montserrat Black', sans-serif;
+        text-align: center;
+        display: block;
+        width: 100%;
     }
-    
+
+    .nav .navbar-toggler {
+        border: none;
+        background: #fff;
+        padding: 6px 12px;
+        border-radius: 5px;
+    }
+
+    .nav .navbar-toggler-icon {
+        filter: invert(100%);
+    }
+
+    .nav .navbar-nav {
+        text-align: center;
+        flex-direction: column;
+    }
+
     .nav .dropdown-menu {
+        text-align: center;
         box-shadow: none;
+    }
+
+    .nav .navbar-collapse {
+        background: #8B4513 !important; /* Fond marron */
+        padding: 10px;
+        border-radius: 5px;
     }
 }
 
@@ -456,12 +528,23 @@ h2 {
 .header-slider {
     position: relative;
     width: 100%;
+    overflow: hidden;
+    border-radius: 10px; /* Coins arrondis pour un effet plus moderne */
 }
 
 .header-slider .header-slider-item {
     position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
-
+.header-slider-item img {
+    width: 100%;
+    height: auto;
+    max-width: 100%;
+    object-fit: cover;
+    border-radius: 10px; /* Pour uniformiser l'affichage */
+}
 .header-slider .header-slider-caption {
     position: absolute;
     top: 20%;
