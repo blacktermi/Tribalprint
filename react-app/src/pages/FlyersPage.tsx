@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { computeNextDelivery, DELIVERY, COMMUNES, type Zone } from '../shared/delivery'
+import { api, isApiConfigured } from '../lib/api/client'
+import { buildOrderPayload } from '../lib/api/buildOrderPayload'
 import UploadBox from '../components/UploadBox'
 
 type Format = 'A5' | 'A4'
@@ -16,6 +18,7 @@ export default function FlyersPage() {
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const [format, setFormat] = useState<Format>('A5')
   const [impression, setImpression] = useState<Impression>('recto')
   const [qty, setQty] = useState(50)
@@ -43,6 +46,47 @@ export default function FlyersPage() {
   const params = new URLSearchParams({ product: 'flyers', format, impression, qty: String(qty), unit_price: String(unitPrice), subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), zone: String(zone), commune, name: fullName.trim(), phone: phone.trim(), email: email.trim(), has_file: String(!!file), file_name: file?.name || '', file_type: file?.type || '', delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
     return `/confirmation?${params.toString()}`
   }, [format, impression, qty, unitPrice, subtotal, discountAmount, delivery, total, zone, commune, fullName, phone, email, deliveryInfo.iso, deliveryInfo.window])
+
+  async function handleOrder() {
+    if (!formValid) return
+    // Si l’API n’est pas configurée, fallback immédiat
+    if (!isApiConfigured()) {
+      navigate(confirmationTo)
+      return
+    }
+    try {
+      setSubmitting(true)
+      // Préparer le payload standardisé
+      const payload = buildOrderPayload({
+        contact: { name: fullName.trim(), phone: phone.trim(), email: email.trim() || undefined },
+        delivery: { zone, commune, date: deliveryInfo.iso, window: deliveryInfo.window },
+        items: [
+          {
+            product_slug: 'flyers',
+            product_label: 'Flyers',
+            quantity: qty,
+            unit_price: unitPrice,
+            options: { format, impression },
+          },
+        ],
+        // TODO: intégrer les uploads signés; pour l’instant on passe le nom/mime à titre indicatif
+        uploads: file ? [{ original_name: file.name, mime_type: file.type }] : undefined,
+        pricing: { subtotal, discount: discountAmount, delivery_fee: delivery, total },
+      })
+      const res = await api.createOrder(payload)
+      // Ajouter la ref à l’URL de confirmation
+      const url = new URL(confirmationTo, window.location.origin)
+      const qp = url.searchParams
+      if (res.ref) qp.set('ref', res.ref)
+      navigate(url.pathname + '?' + qp.toString())
+    } catch (e) {
+      // En cas d’erreur API, fallback vers le flow existant
+      console.error('createOrder failed, fallback to local confirmation:', e)
+      navigate(confirmationTo)
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -130,7 +174,7 @@ export default function FlyersPage() {
               {total > 20000 && (<div className="flex justify-between text-slate-800"><span>Acompte (30%) à régler</span><span>{Math.round(total * 0.30).toLocaleString()} FCFA</span></div>)}
             </div>
 
-            <button type="button" onClick={() => formValid && navigate(confirmationTo)} disabled={!formValid} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>Commander</button>
+            <button type="button" onClick={handleOrder} disabled={!formValid || submitting} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>{submitting ? 'Envoi…' : 'Commander'}</button>
           </div>
         </div>
       </div>
