@@ -17,12 +17,12 @@ type FormatOption = { code: string; label: string; size: string; price: number }
 const FORMAT_OPTIONS: Record<Kind, FormatOption[]> = {
   // Metal Poster: format unique (exigence métier)
   metal: [
-    { code: 'M-A3', label: 'A3 — 29,7 × 42 cm', size: '29,7 × 42 cm', price: 15000 },
+    { code: 'M-A3', label: 'A3 — 32 × 48 cm', size: '32 × 48 cm', price: 15000 },
   ],
   // Aluminium: aligne sur la page TableauxAluminium (A2/A1/A0)
   aluminium: [
     { code: 'A4', label: 'A4 — 21 × 29,7 cm', size: '21 × 29,7 cm', price: 10000 },
-    { code: 'A3', label: 'A3 — 29,7 × 42 cm', size: '29,7 × 42 cm', price: 15000 },
+  { code: 'A3', label: 'A3 — 32 × 48 cm', size: '32 × 48 cm', price: 15000 },
     { code: 'A2', label: 'A2 — 42 × 59,4 cm', size: '42 × 59,4 cm', price: 45000 },
     { code: 'A1', label: 'A1 — 59,4 × 84,1 cm', size: '59,4 × 84,1 cm', price: 65000 },
     { code: 'A0', label: 'A0 — 84,1 × 118,9 cm', size: '84,1 × 118,9 cm', price: 85000 },
