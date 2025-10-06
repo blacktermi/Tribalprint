@@ -5,6 +5,8 @@ import './index.css'
 import AppLayout from './shared/AppLayout'
 import HomePage from './pages/HomePage'
 import PlaceholderPage from './pages/PlaceholderPage'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
+import TermsPage from './pages/TermsPage'
 import MugPage from './pages/MugPage'
 import PhotoStripsPage from './pages/PhotoStripsPage'
 import PhotoCartePage from './pages/PhotoCartePage'
@@ -57,9 +59,9 @@ const router = createBrowserRouter([
   { path: 'stickers', element: <StickersPage /> },
   { path: 'etiquettes', element: <EtiquettePage /> },
   { path: 'Mug', element: <MugPage /> },
-      // Footer / pages légales
-      { path: 'politique-confidentialite', element: <PlaceholderPage title="Politique de Confidentialité" /> },
-      { path: 'conditions-utilisation', element: <PlaceholderPage title="Conditions Générales" /> },
+  // Footer / pages légales
+  { path: 'politique-confidentialite', element: <PrivacyPolicyPage /> },
+  { path: 'conditions-utilisation', element: <TermsPage /> },
       { path: 'confirmation', element: <PlaceholderPage title="Confirmation" /> },
       // 404 fallback
       { path: '*', element: <PlaceholderPage title="Page introuvable" description="Cette page n'existe pas encore ou a été déplacée." /> },
