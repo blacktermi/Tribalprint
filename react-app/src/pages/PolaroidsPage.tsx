@@ -61,6 +61,7 @@ export default function PolaroidsPage() {
   // Infos client
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   // Gestion erreurs affichage
   const [touched, setTouched] = useState(false)
 
@@ -124,6 +125,7 @@ export default function PolaroidsPage() {
       total: String(total),
       name: fullName.trim(),
       phone: phone.trim(),
+      email: email.trim(),
       photos: String(photos.length),
       color: colorMode,
       finish,
@@ -134,7 +136,7 @@ export default function PolaroidsPage() {
       delivery_window: deliveryInfo.window,
     })
     return `/confirmation?${params.toString()}`
-  }, [pack, qty, zone, commune, subtotal, delivery, total, fullName, phone, photos.length, colorMode, finish, orientation, border, textFilled, deliveryInfo.iso, deliveryInfo.window])
+  }, [pack, qty, zone, commune, subtotal, delivery, total, fullName, phone, email, photos.length, colorMode, finish, orientation, border, textFilled, deliveryInfo.iso, deliveryInfo.window])
 
   const handleOrder = () => {
     if (!formValid) {
@@ -193,6 +195,20 @@ export default function PolaroidsPage() {
                 {touched && !phoneValid && (
                   <div className="mt-1 text-xs text-red-600">Numéro invalide (8 à 15 chiffres).</div>
                 )}
+              </div>
+            </div>
+
+            {/* Email optionnel */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="md:col-span-3">
+                <label className="text-sm font-medium">Email <span className="text-slate-400">(optionnel)</span></label>
+                <input
+                  type="email"
+                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Ex: nom@exemple.com"
+                />
               </div>
             </div>
 

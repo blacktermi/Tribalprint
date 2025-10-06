@@ -40,6 +40,7 @@ export default function CategoryBaseForm({ title, packOptions, bannerSrc, getBan
   const [photos, setPhotos] = useState<File[]>([])
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [touched, setTouched] = useState(false)
 
   const delivery = useMemo(() => DELIVERY[zone], [zone])
@@ -95,6 +96,7 @@ export default function CategoryBaseForm({ title, packOptions, bannerSrc, getBan
       total: String(total),
       name: fullName.trim(),
       phone: phone.trim(),
+      email: email.trim(),
       photos: String(photos.length),
       color: colorMode,
       finish,
@@ -104,7 +106,7 @@ export default function CategoryBaseForm({ title, packOptions, bannerSrc, getBan
       delivery_window: deliveryInfo.window,
     })
     return `/confirmation?${params.toString()}`
-  }, [title, selectedPack?.label, selectedPack?.id, qty, zone, commune, subtotal, delivery, total, fullName, phone, photos.length, colorMode, finish, orientation, border, deliveryInfo.iso, deliveryInfo.window])
+  }, [title, selectedPack?.label, selectedPack?.id, qty, zone, commune, subtotal, delivery, total, fullName, phone, email, photos.length, colorMode, finish, orientation, border, deliveryInfo.iso, deliveryInfo.window])
 
   const banner = getBannerSrc ? getBannerSrc(selectedPackId) : bannerSrc || '/img/banner.jpg'
 
@@ -132,6 +134,20 @@ export default function CategoryBaseForm({ title, packOptions, bannerSrc, getBan
                 <label className="text-sm font-medium">Numéro de téléphone <span className="text-red-600">*</span></label>
                 <input type="tel" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={() => setTouched(true)} placeholder="Ex: +225 07 87 50 26 37" />
                 {touched && !phoneValid && (<div className="mt-1 text-xs text-red-600">Numéro invalide (8 à 15 chiffres).</div>)}
+              </div>
+            </div>
+
+            {/* Email optionnel */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="md:col-span-3">
+                <label className="text-sm font-medium">Email <span className="text-slate-400">(optionnel)</span></label>
+                <input
+                  type="email"
+                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Ex: nom@exemple.com"
+                />
               </div>
             </div>
 

@@ -63,6 +63,7 @@ export default function AlbumPhotoPage() {
   // Infos client
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [touched, setTouched] = useState(false)
 
   // Pour les albums, on calcule les pages à partir des photos afin d'éviter des pages blanches
@@ -157,6 +158,7 @@ export default function AlbumPhotoPage() {
       total: String(total),
       name: fullName.trim(),
       phone: phone.trim(),
+      email: email.trim(),
       photos: String(photos.length),
       coverText: coverText.trim(),
       coverImage: coverImage ? '1' : '0',
@@ -166,7 +168,7 @@ export default function AlbumPhotoPage() {
       delivery_window: deliveryInfo.window,
     })
     return `/confirmation?${params.toString()}`
-  }, [prodType, format, qty, zone, commune, pages, subtotal, delivery, total, fullName, phone, photos.length, coverText, coverImage, pdfFile, coverFinish, deliveryInfo.iso, deliveryInfo.window])
+  }, [prodType, format, qty, zone, commune, pages, subtotal, delivery, total, fullName, phone, email, photos.length, coverText, coverImage, pdfFile, coverFinish, deliveryInfo.iso, deliveryInfo.window])
 
   const handleOrder = () => {
     if (!formValid) {
@@ -243,6 +245,20 @@ export default function AlbumPhotoPage() {
                 {touched && !phoneValid && (
                   <div className="mt-1 text-xs text-red-600">Numéro invalide (8 à 15 chiffres).</div>
                 )}
+              </div>
+            </div>
+
+            {/* Email optionnel */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="md:col-span-3">
+                <label className="text-sm font-medium">Email <span className="text-slate-400">(optionnel)</span></label>
+                <input
+                  type="email"
+                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Ex: nom@exemple.com"
+                />
               </div>
             </div>
 

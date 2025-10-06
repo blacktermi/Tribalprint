@@ -7,6 +7,7 @@ export default function StickersPage() {
   const navigate = useNavigate()
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [packs, setPacks] = useState(1) // 1 pack = 10 stickers
   const [zone, setZone] = useState<Zone>(1)
   const [commune, setCommune] = useState(COMMUNES[1][0])
@@ -28,9 +29,9 @@ export default function StickersPage() {
   // Aperçu géré par UploadBox
 
   const confirmationTo = useMemo(() => {
-  const params = new URLSearchParams({ product: 'stickers', packs: String(packs), pack_size: '10', unit_pack_price: String(unitPackPrice), subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), zone: String(zone), commune, name: fullName.trim(), phone: phone.trim(), has_file: String(!!file), file_name: file?.name || '', file_type: file?.type || '', delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
+  const params = new URLSearchParams({ product: 'stickers', packs: String(packs), pack_size: '10', unit_pack_price: String(unitPackPrice), subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), zone: String(zone), commune, name: fullName.trim(), phone: phone.trim(), email: email.trim(), has_file: String(!!file), file_name: file?.name || '', file_type: file?.type || '', delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
     return `/confirmation?${params.toString()}`
-  }, [packs, unitPackPrice, subtotal, discountAmount, delivery, total, zone, commune, fullName, phone, deliveryInfo.iso, deliveryInfo.window])
+  }, [packs, unitPackPrice, subtotal, discountAmount, delivery, total, zone, commune, fullName, phone, email, deliveryInfo.iso, deliveryInfo.window])
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -55,6 +56,13 @@ export default function StickersPage() {
                 <label className="text-sm font-medium">Téléphone <span className="text-red-600">*</span></label>
                 <input type="tel" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Ex: +225 05 55 66 77 88" />
                 {touched && !phoneValid && (<div className="mt-1 text-xs text-red-600">Numéro invalide.</div>)}
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="md:col-span-3">
+                <label className="text-sm font-medium">Email <span className="text-slate-400">(optionnel)</span></label>
+                <input type="email" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Ex: nom@exemple.com" />
               </div>
             </div>
 

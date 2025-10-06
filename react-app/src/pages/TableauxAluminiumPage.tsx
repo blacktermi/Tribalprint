@@ -62,6 +62,7 @@ export default function TableauxAluminiumPage() {
   // Global options
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [orientation, setOrientation] = useState<Orientation>('portrait')
   const [marieLouise, setMarieLouise] = useState<MarieLouise>('sans')
   const [frameColor, setFrameColor] = useState<FrameColor>('noir')
@@ -250,6 +251,7 @@ export default function TableauxAluminiumPage() {
       total: String(total),
       name: fullName.trim(),
       phone: phone.trim(),
+      email: email.trim(),
     })
     // Quantités par format + nb photos par format
     FORMATS.forEach(f => {
@@ -281,7 +283,7 @@ export default function TableauxAluminiumPage() {
     params.append('delivery_date', deliveryInfo.iso)
     params.append('delivery_window', deliveryInfo.window)
     return `/confirmation?${params.toString()}`
-  }, [orientation, marieLouise, frameColor, colorMode, zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, quantities, photosByFormat, shapesByFormat, customItems, deliveryInfo.iso, deliveryInfo.window])
+  }, [orientation, marieLouise, frameColor, colorMode, zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, email, quantities, photosByFormat, shapesByFormat, customItems, deliveryInfo.iso, deliveryInfo.window])
 
   const handleOrder = () => {
     setTouched(true)
@@ -320,6 +322,14 @@ export default function TableauxAluminiumPage() {
                 <label className="text-sm font-medium">Numéro de téléphone <span className="text-red-600">*</span></label>
                 <input type="tel" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={() => setTouched(true)} placeholder="Ex: +225 07 87 50 26 37" />
                 {touched && !phoneValid && (<div className="mt-1 text-xs text-red-600">Numéro invalide (8 à 15 chiffres).</div>)}
+              </div>
+            </div>
+
+            {/* Email optionnel */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="md:col-span-3">
+                <label className="text-sm font-medium">Email <span className="text-slate-400">(optionnel)</span></label>
+                <input type="email" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Ex: nom@exemple.com" />
               </div>
             </div>
 

@@ -23,6 +23,7 @@ export default function ConfirmationPage() {
   const q = useQuery()
   const name = q.get('name') || ''
   const phone = q.get('phone') || ''
+  const email = q.get('email') || ''
   const product = q.get('product') || ''
   const ref = q.get('ref') || ''
   const formatWanted = q.get('format') || ''
@@ -57,6 +58,7 @@ export default function ConfirmationPage() {
     (deliveryDate || deliveryWindow || commune) ? `Livraison: ${deliveryDate || ''}${deliveryWindow ? ` • ${deliveryWindow}` : ''}${commune ? ` • ${commune}` : ''}` : undefined,
     name ? `Nom: ${name}` : undefined,
     phone ? `Téléphone: ${phone}` : undefined,
+    email ? `Email: ${email}` : undefined,
   ].filter(Boolean).join('\n')
   const waUrl = `https://wa.me/2250787502637?text=${encodeURIComponent(waMsgLines)}`
 
@@ -91,6 +93,9 @@ export default function ConfirmationPage() {
             )}
             {commune && (
               <div className="flex justify-between text-slate-600"><span>Commune</span><span>{commune}</span></div>
+            )}
+            {email && (
+              <div className="flex justify-between text-slate-600"><span>Email</span><span>{email}</span></div>
             )}
             {phone && (
               <div className="flex justify-between text-slate-600"><span>Téléphone</span><span>{phone}</span></div>

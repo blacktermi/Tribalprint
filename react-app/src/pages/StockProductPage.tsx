@@ -54,6 +54,7 @@ export default function StockProductPage() {
   const k = inferredKind
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [zone, setZone] = useState<Zone>(1)
   const [commune, setCommune] = useState<string>(COMMUNES[1][0])
   const [qty, setQty] = useState(1)
@@ -86,10 +87,10 @@ export default function StockProductPage() {
   const size = selectedFormat?.size || ''
 
   const confirmationTo = useMemo(() => {
-    const params = new URLSearchParams({ product: `stock-${k}`, ref: id || '', format: selectedFormat?.code || '', zone: String(zone), commune, subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), name: fullName.trim(), phone: phone.trim(), delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
+    const params = new URLSearchParams({ product: `stock-${k}`, ref: id || '', format: selectedFormat?.code || '', zone: String(zone), commune, subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), name: fullName.trim(), phone: phone.trim(), email: email.trim(), delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
     params.append('qty', String(qty))
     return `/confirmation?${params.toString()}`
-  }, [k, id, formatCode, selectedFormat?.code, zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, deliveryInfo.iso, deliveryInfo.window, qty])
+  }, [k, id, formatCode, selectedFormat?.code, zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, email, deliveryInfo.iso, deliveryInfo.window, qty])
 
   const handleOrder = () => { if (!formValid) return; navigate(confirmationTo) }
 
@@ -130,6 +131,14 @@ export default function StockProductPage() {
                 <label className="text-sm font-medium">Numéro de téléphone <span className="text-red-600">*</span></label>
                 <input type="tel" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Ex: +225 07 87 50 26 37" />
                 {touched && !phoneValid && (<div className="mt-1 text-xs text-red-600">Numéro invalide (8 à 15 chiffres).</div>)}
+              </div>
+            </div>
+
+            {/* Email optionnel */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="md:col-span-3">
+                <label className="text-sm font-medium">Email <span className="text-slate-400">(optionnel)</span></label>
+                <input type="email" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Ex: nom@exemple.com" />
               </div>
             </div>
 

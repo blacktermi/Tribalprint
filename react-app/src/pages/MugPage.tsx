@@ -5,6 +5,9 @@ import UploadBox from '../components/UploadBox'
 
 export default function MugPage() {
   const navigate = useNavigate()
+  const [fullName, setFullName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [variant, setVariant] = useState<'standard' | 'magique'>('standard')
   const [qty, setQty] = useState(1)
   const [zone, setZone] = useState<Zone>(1)
@@ -19,11 +22,13 @@ export default function MugPage() {
   const total = subtotal - discountAmount + delivery
   const deliveryInfo = useMemo(() => computeNextDelivery(), [])
   const updateZone = (z: Zone) => { setZone(z); setCommune(COMMUNES[z][0]) }
+  const phoneValid = useMemo(() => { const d = phone.replace(/\D/g, ''); return d.length >= 8 && d.length <= 15 }, [phone])
+  const formValid = useMemo(() => fullName.trim().length > 1 && phoneValid && qty >= 1, [fullName, phoneValid, qty])
 
   const confirmationTo = useMemo(() => {
-    const params = new URLSearchParams({ product: 'mug', variant, qty: String(qty), unit_price: String(unitPrice), subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), zone: String(zone), commune, has_file: String(!!file), file_name: file?.name || '', file_type: file?.type || '', delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
+    const params = new URLSearchParams({ product: 'mug', variant, qty: String(qty), unit_price: String(unitPrice), subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), zone: String(zone), commune, name: fullName.trim(), phone: phone.trim(), email: email.trim(), has_file: String(!!file), file_name: file?.name || '', file_type: file?.type || '', delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
     return `/confirmation?${params.toString()}`
-  }, [variant, qty, unitPrice, subtotal, discountAmount, delivery, total, zone, commune, file, deliveryInfo.iso, deliveryInfo.window])
+  }, [variant, qty, unitPrice, subtotal, discountAmount, delivery, total, zone, commune, fullName, phone, email, file, deliveryInfo.iso, deliveryInfo.window])
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -38,6 +43,22 @@ export default function MugPage() {
           <p className="mt-1 text-slate-600 text-sm">Deux variantes: Standard (10 000 FCFA) et Magique (15 000 FCFA).</p>
 
           <div className="mt-6 space-y-6">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium">Nom et Prénom <span className="text-red-600">*</span></label>
+                <input type="text" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Ex: Koffi Kouadio" />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Téléphone <span className="text-red-600">*</span></label>
+                <input type="tel" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Ex: +225 07 87 50 26 37" />
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="md:col-span-3">
+                <label className="text-sm font-medium">Email <span className="text-slate-400">(optionnel)</span></label>
+                <input type="email" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Ex: nom@exemple.com" />
+              </div>
+            </div>
             <div className="flex flex-wrap items-center gap-3">
               <div className="text-sm font-medium">Modèle</div>
               {(['standard','magique'] as const).map(v => (
@@ -82,7 +103,7 @@ export default function MugPage() {
               {total > 20000 && (<div className="flex justify-between text-slate-800"><span>Acompte (30%) à régler</span><span>{Math.round(total * 0.30).toLocaleString()} FCFA</span></div>)}
             </div>
 
-            <button type="button" onClick={() => navigate(confirmationTo)} className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white bg-slate-900 hover:bg-slate-800">Commander</button>
+            <button type="button" onClick={() => formValid && navigate(confirmationTo)} disabled={!formValid} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>Commander</button>
           </div>
         </div>
       </div>

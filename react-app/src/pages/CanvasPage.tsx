@@ -32,6 +32,7 @@ export default function CanvasPage() {
   const navigate = useNavigate()
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [orientation, setOrientation] = useState<Orientation>('portrait')
   const [colorMode, setColorMode] = useState<ColorMode>('couleur')
   const [zone, setZone] = useState<Zone>(1)
@@ -124,7 +125,7 @@ export default function CanvasPage() {
     return { ...it, photos, qty }
   }))
   const confirmationTo = useMemo(() => {
-  const params = new URLSearchParams({ product: 'canvas', orientation, color: colorMode, zone: String(zone), commune, subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), name: fullName.trim(), phone: phone.trim(), delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
+  const params = new URLSearchParams({ product: 'canvas', orientation, color: colorMode, zone: String(zone), commune, subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), name: fullName.trim(), phone: phone.trim(), email: email.trim(), delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
     FORMATS.forEach(f => { const q = quantities[f.code] || 0; if (q > 0) { params.append(`qty_${f.code}`, String(q)); params.append(`photos_${f.code}`, String(photosByFormat[f.code]?.length || 0)); params.append(`shape_${f.code}`, shapesByFormat[f.code]) } })
     customItems.forEach((it, idx) => { if ((it.qty || 0) > 0) { const unit = computeCustomUnitPrice(it.width, it.height); params.append(`custom_${idx}_qty`, String(it.qty)); params.append(`custom_${idx}_width_cm`, String(it.width || '')); params.append(`custom_${idx}_height_cm`, String(it.height || '')); params.append(`custom_${idx}_photos`, String(it.photos.length)); params.append(`custom_${idx}_unit_price`, String(unit)) } })
   const a1 = FORMATS.find(f => f.code === 'A1')!; const areaA1 = a1.widthCm * a1.heightCm
@@ -133,7 +134,7 @@ export default function CanvasPage() {
     const deliveryMethod = (hasLargeStd || hasLargeCustom) ? 'yango' : 'standard'
     params.append('delivery_method', deliveryMethod)
     return `/confirmation?${params.toString()}`
-  }, [orientation, colorMode, zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, quantities, photosByFormat, shapesByFormat, customItems])
+  }, [orientation, colorMode, zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, email, quantities, photosByFormat, shapesByFormat, customItems])
 
   const handleOrder = () => { setTouched(true); if (!formValid) return; navigate(confirmationTo) }
 
@@ -160,6 +161,14 @@ export default function CanvasPage() {
                 <label className="text-sm font-medium">Numéro de téléphone <span className="text-red-600">*</span></label>
                 <input type="tel" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={() => setTouched(true)} placeholder="Ex: +225 07 87 50 26 37" />
                 {touched && !phoneValid && (<div className="mt-1 text-xs text-red-600">Numéro invalide (8 à 15 chiffres).</div>)}
+              </div>
+            </div>
+
+            {/* Email optionnel */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="md:col-span-3">
+                <label className="text-sm font-medium">Email <span className="text-slate-400">(optionnel)</span></label>
+                <input type="email" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Ex: nom@exemple.com" />
               </div>
             </div>
 

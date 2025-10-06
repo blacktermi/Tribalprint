@@ -22,6 +22,7 @@ export default function MetalPosterPage() {
   const navigate = useNavigate()
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [zone, setZone] = useState<Zone>(1)
   const [commune, setCommune] = useState<string>(COMMUNES[1][0])
 
@@ -61,12 +62,12 @@ export default function MetalPosterPage() {
   const removePhoto = (code: (typeof FORMATS)[number]['code'], idx: number) => setPhotosByFormat(prev => ({ ...prev, [code]: (prev[code] || []).filter((_, i) => i !== idx) }))
   const setQty = (code: (typeof FORMATS)[number]['code'], q: number) => setQuantities(prev => ({ ...prev, [code]: Math.max(0, Math.min(50, q)) }))
   const confirmationTo = useMemo(() => {
-  const params = new URLSearchParams({ product: 'metalposter', zone: String(zone), commune, subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), name: fullName.trim(), phone: phone.trim(), delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
+  const params = new URLSearchParams({ product: 'metalposter', zone: String(zone), commune, subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), name: fullName.trim(), phone: phone.trim(), email: email.trim(), delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
     FORMATS.forEach(f => { const q = quantities[f.code] || 0; if (q > 0) { params.append(`qty_${f.code}`, String(q)); params.append(`photos_${f.code}`, String(photosByFormat[f.code]?.length || 0)); } })
     const deliveryMethod = 'standard'
     params.append('delivery_method', deliveryMethod)
     return `/confirmation?${params.toString()}`
-  }, [zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, quantities, photosByFormat])
+  }, [zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, email, quantities, photosByFormat])
 
   const handleOrder = () => { setTouched(true); if (!formValid) return; navigate(confirmationTo) }
 
@@ -93,6 +94,13 @@ export default function MetalPosterPage() {
                 <label className="text-sm font-medium">Numéro de téléphone <span className="text-red-600">*</span></label>
                 <input type="tel" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={() => setTouched(true)} placeholder="Ex: +225 07 87 50 26 37" />
                 {touched && !phoneValid && (<div className="mt-1 text-xs text-red-600">Numéro invalide (8 à 15 chiffres).</div>)}
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="md:col-span-3">
+                <label className="text-sm font-medium">Email <span className="text-slate-400">(optionnel)</span></label>
+                <input type="email" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Ex: nom@exemple.com" />
               </div>
             </div>
 
