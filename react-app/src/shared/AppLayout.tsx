@@ -56,13 +56,13 @@ export default function AppLayout() {
               <a href="https://wa.me/2250787502637" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="hover:text-green-600">
                 <i className="fab fa-whatsapp text-lg"></i>
               </a>
-              <a href="https://instagram.com/tribal.print" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-pink-600">
+              <a href="https://www.instagram.com/_tribal.print/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-pink-600">
                 <i className="fab fa-instagram text-lg"></i>
               </a>
-              <a href="https://facebook.com/tribalprint" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-blue-700">
+              <a href="https://www.facebook.com/tribalprintci" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-blue-700">
                 <i className="fab fa-facebook text-lg"></i>
               </a>
-              <a href="https://tiktok.com/@tribalprint" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="hover:text-black">
+              <a href="https://www.tiktok.com/@_tribalprint" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="hover:text-black">
                 <i className="fab fa-tiktok text-lg"></i>
               </a>
             </div>
