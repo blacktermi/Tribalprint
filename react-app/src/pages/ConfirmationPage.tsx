@@ -72,32 +72,51 @@ export default function ConfirmationPage() {
         {/* Paiement Wave */}
         <div className="rounded-xl border border-slate-200 bg-white p-4">
           <div className="text-sm font-medium mb-2">Paiement</div>
-          <p className="text-sm text-slate-600 mb-3">Veuillez payer Tribal Print avec Wave en cliquant sur le bouton ci-dessous.</p>
-          <a
-            href={WAVE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-sky-600 hover:bg-sky-700 text-white px-5 py-2 text-sm font-medium shadow"
-          >
-            {logoOk ? (
-              <img
-                src="/img/wave-logo.svg"
-                alt="Wave"
-                className="h-5 w-5 rounded"
-                onError={() => setLogoOk(false)}
-              />
-            ) : (
-              <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-white/15">👋</span>
+          <p className="text-sm text-slate-600">Le paiement n’est pas obligatoire maintenant — vous pouvez aussi payer à la livraison.</p>
+          <p className="text-xs text-slate-500 mb-3">Si vous payez avec Wave, indiquez le montant souhaité dans l’app Wave.</p>
+
+          <div className="flex flex-wrap gap-2">
+            {typeof acompte !== 'undefined' && (
+              <a
+                href={WAVE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-sm font-medium shadow"
+                title={`Payer l’acompte de ${acompte.toLocaleString()} FCFA`}
+              >
+                {logoOk ? (
+                  <img src="/img/wave-logo.svg" alt="Wave" className="h-5 w-5 rounded" onError={() => setLogoOk(false)} />
+                ) : (
+                  <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-white/15">👋</span>
+                )}
+                <span>Payer l’acompte · {acompte.toLocaleString()} FCFA</span>
+              </a>
             )}
-            <span>Payer avec Wave</span>
-          </a>
+
+            {typeof total !== 'undefined' && (
+              <a
+                href={WAVE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-sm font-medium shadow"
+                title={`Payer le total de ${total.toLocaleString()} FCFA`}
+              >
+                {logoOk ? (
+                  <img src="/img/wave-logo.svg" alt="Wave" className="h-5 w-5 rounded" onError={() => setLogoOk(false)} />
+                ) : (
+                  <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-white/15">👋</span>
+                )}
+                <span>Payer le total · {total.toLocaleString()} FCFA</span>
+              </a>
+            )}
+          </div>
+
           {typeof acompte !== 'undefined' && (
-            <div className="mt-3 text-xs text-slate-600">
-              Montant de l'acompte (30%) suggéré: <span className="font-medium text-slate-900">{acompte.toLocaleString()} FCFA</span>
-            </div>
+            <div className="mt-3 text-xs text-slate-600">Acompte conseillé: <span className="font-medium text-slate-900">{acompte.toLocaleString()} FCFA</span></div>
           )}
+
           <div className="mt-4 text-xs text-slate-500">
-            Un conseiller vous contactera si besoin pour finaliser les détails et la livraison.
+            Un conseiller vous contactera si besoin pour finaliser les détails et la livraison. Paiement à la livraison accepté.
           </div>
         </div>
       </div>
