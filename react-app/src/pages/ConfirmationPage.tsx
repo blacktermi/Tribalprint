@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
 const WAVE_URL = 'https://pay.wave.com/m/M_K2JzSem1eAKX/c/ci/'
@@ -16,6 +16,7 @@ function formatFcfa(n?: string | null) {
 }
 
 export default function ConfirmationPage() {
+  const [logoOk, setLogoOk] = useState(true)
   const q = useQuery()
   const name = q.get('name') || ''
   const phone = q.get('phone') || ''
@@ -76,9 +77,19 @@ export default function ConfirmationPage() {
             href={WAVE_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center rounded-full bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 text-sm font-medium shadow"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-sky-600 hover:bg-sky-700 text-white px-5 py-2 text-sm font-medium shadow"
           >
-            Payer avec Wave
+            {logoOk ? (
+              <img
+                src="/img/wave-logo.svg"
+                alt="Wave"
+                className="h-5 w-5 rounded"
+                onError={() => setLogoOk(false)}
+              />
+            ) : (
+              <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-white/15">👋</span>
+            )}
+            <span>Payer avec Wave</span>
           </a>
           {typeof acompte !== 'undefined' && (
             <div className="mt-3 text-xs text-slate-600">
