@@ -8,6 +8,7 @@ import PlaceholderPage from './pages/PlaceholderPage'
 import { Navigate } from 'react-router-dom'
 import AboutPage from './pages/AboutPage'
 import AlbumPhotoPage from './pages/AlbumPhotoPage'
+import PolaroidsPage from './pages/PolaroidsPage'
 
 const router = createBrowserRouter([
   {
@@ -16,8 +17,8 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
   { path: 'a-propos', element: <AboutPage /> },
-      { path: 'polaroids', element: <PlaceholderPage title="Polaroïds" /> },
-      { path: 'polaroidtexte', element: <PlaceholderPage title="Polaroïds texte" /> },
+  { path: 'polaroids', element: <PolaroidsPage /> },
+  { path: 'polaroidtexte', element: <PolaroidsPage /> },
       { path: 'miniphoto', element: <PlaceholderPage title="Mini Photo" /> },
       { path: 'photocarte', element: <PlaceholderPage title="Photo Carte" /> },
       { path: 'photostrips', element: <PlaceholderPage title="Photo Strips" /> },
