@@ -34,6 +34,17 @@ export default function ConfirmationPage() {
   const total = totalStr ? Number(totalStr) : undefined
   const acompte = total && total > 20000 ? Math.round(total * 0.3) : undefined
 
+  // Lien WhatsApp pour confirmation de paiement à la livraison
+  const waMsgLines = [
+    'Bonjour, je confirme payer à la livraison pour ma commande Tribal Print.',
+    product ? `Produit: ${product}` : undefined,
+    typeof total !== 'undefined' ? `Total: ${total.toLocaleString()} FCFA` : undefined,
+    (deliveryDate || deliveryWindow || commune) ? `Livraison: ${deliveryDate || ''}${deliveryWindow ? ` • ${deliveryWindow}` : ''}${commune ? ` • ${commune}` : ''}` : undefined,
+    name ? `Nom: ${name}` : undefined,
+    phone ? `Téléphone: ${phone}` : undefined,
+  ].filter(Boolean).join('\n')
+  const waUrl = `https://wa.me/2250787502637?text=${encodeURIComponent(waMsgLines)}`
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-10">
       <div className="mb-6">
@@ -126,6 +137,18 @@ export default function ConfirmationPage() {
                 <span>Payer le total · {total.toLocaleString()} FCFA</span>
               </a>
             )}
+
+            {/* Payer à la livraison */}
+            <a
+              href={waUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 px-4 py-2 text-sm font-medium"
+              title="Confirmer paiement à la livraison sur WhatsApp"
+            >
+              <span>📦</span>
+              <span>Payer à la livraison</span>
+            </a>
           </div>
 
           {typeof acompte !== 'undefined' && (
