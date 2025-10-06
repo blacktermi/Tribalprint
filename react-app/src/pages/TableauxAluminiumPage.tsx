@@ -11,11 +11,11 @@ type Shape = 'rect' | 'square'
 
 // Tarifs par format
 const FORMATS = [
-  { code: 'A4', group: 'Petit format', label: 'Format A4 (21 × 30 cm)', price: 10000 },
-  { code: 'A3', group: 'Moyen format', label: 'Format A3 (32 × 48 cm)', price: 15000 },
-  { code: 'A2', group: 'Moyen format', label: 'Format A2 (42 × 60 cm)', price: 45000 },
-  { code: 'A1', group: 'Grand format', label: 'Format A1 (60 × 85 cm)', price: 65000 },
-  { code: 'A0', group: 'Grand format', label: 'Format A0 (85 × 119 cm)', price: 85000 },
+  { code: 'A4', group: 'Petit format', label: 'Format A4 (21 × 30 cm)', price: 10000, widthCm: 21, heightCm: 30 },
+  { code: 'A3', group: 'Moyen format', label: 'Format A3 (32 × 48 cm)', price: 15000, widthCm: 32, heightCm: 48 },
+  { code: 'A2', group: 'Moyen format', label: 'Format A2 (42 × 60 cm)', price: 45000, widthCm: 42, heightCm: 60 },
+  { code: 'A1', group: 'Grand format', label: 'Format A1 (60 × 85 cm)', price: 65000, widthCm: 60, heightCm: 85 },
+  { code: 'A0', group: 'Grand format', label: 'Format A0 (85 × 119 cm)', price: 85000, widthCm: 85, heightCm: 119 },
 ] as const
 
 const DELIVERY: Record<Zone, number> = { 1: 1500, 2: 2000, 3: 3000 }
@@ -52,7 +52,6 @@ type CustomFormatItem = {
   width: number | ''
   height: number | ''
   qty: number
-  price: number | ''
   photos: File[]
 }
 
@@ -91,7 +90,25 @@ export default function TableauxAluminiumPage() {
 
   const delivery = useMemo(() => DELIVERY[zone], [zone])
   const subtotalStandard = useMemo(() => FORMATS.reduce((sum, f) => sum + (quantities[f.code] || 0) * f.price, 0), [quantities])
-  const subtotalCustom = useMemo(() => customItems.reduce((sum, it) => sum + (it.qty || 0) * (typeof it.price === 'number' ? it.price : 0), 0), [customItems])
+  const computeCustomUnitPrice = (w: number | '', h: number | ''): number => {
+    if (typeof w !== 'number' || typeof h !== 'number' || w <= 0 || h <= 0) return 0
+    const area = w * h
+    const std = FORMATS.map(f => ({ code: f.code, price: f.price, area: f.widthCm * f.heightCm }))
+      .sort((a, b) => a.area - b.area)
+    const min = std[0]
+    const max = std[std.length - 1]
+    // En dessous du plus petit format => prix du plus petit (palier)
+    if (area <= min.area) return min.price
+    // Entre deux formats => prix du format palier supérieur
+    for (let i = 0; i < std.length; i++) {
+      if (area <= std[i].area) return std[i].price
+    }
+    // Au-dessus du plus grand (A0): proportionnel à la surface sur base A0, arrondi au millier
+    const unit = max.price / max.area
+    const raw = unit * area
+    return Math.round(raw / 1000) * 1000
+  }
+  const subtotalCustom = useMemo(() => customItems.reduce((sum, it) => sum + (it.qty || 0) * computeCustomUnitPrice(it.width, it.height), 0), [customItems])
   const subtotal = subtotalStandard + subtotalCustom
   const total = subtotal + delivery
   const totalQty = useMemo(() =>
@@ -168,7 +185,7 @@ export default function TableauxAluminiumPage() {
   const addCustomItem = () => {
     setCustomItems(prev => [
       ...prev,
-      { id: Math.random().toString(36).slice(2, 9), width: '', height: '', qty: 0, price: '', photos: [] },
+      { id: Math.random().toString(36).slice(2, 9), width: '', height: '', qty: 0, photos: [] },
     ])
   }
   const removeCustomItem = (id: string) => {
@@ -218,15 +235,15 @@ export default function TableauxAluminiumPage() {
         params.append(`shape_${f.code}`, shapesByFormat[f.code])
       }
     })
-    // Formats personnalisés
+    // Formats personnalisés (prix auto)
     customItems.forEach((it, idx) => {
       if ((it.qty || 0) > 0) {
+        const unit = computeCustomUnitPrice(it.width, it.height)
         params.append(`custom_${idx}_qty`, String(it.qty))
         params.append(`custom_${idx}_width_cm`, String(it.width || ''))
         params.append(`custom_${idx}_height_cm`, String(it.height || ''))
         params.append(`custom_${idx}_photos`, String(it.photos.length))
-        if (typeof it.price === 'number') params.append(`custom_${idx}_unit_price`, String(it.price))
-        else params.append(`custom_${idx}_unit_price`, 'devis')
+        params.append(`custom_${idx}_unit_price`, String(unit))
       }
     })
     return `/confirmation?${params.toString()}`
@@ -441,8 +458,13 @@ export default function TableauxAluminiumPage() {
                           <input type="number" min={0} max={50} className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm" value={it.qty} onChange={(e) => updateCustomField(it.id, 'qty', Math.max(0, Math.min(50, Number(e.target.value) || 0)))} />
                         </div>
                         <div className="sm:col-span-2">
-                          <label className="text-xs">Prix unitaire (FCFA) — optionnel</label>
-                          <input type="number" min={0} step="100" className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1 text-sm" value={it.price === '' ? '' : it.price} onChange={(e) => updateCustomField(it.id, 'price', e.target.value === '' ? '' : Math.max(0, Number(e.target.value) || 0))} placeholder="sur devis si vide" />
+                          <label className="text-xs">Prix unitaire estimé</label>
+                          <div className="mt-1 h-[34px] flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 text-sm">
+                            {(() => {
+                              const unit = computeCustomUnitPrice(it.width, it.height)
+                              return unit > 0 ? `${unit.toLocaleString()} FCFA` : '—'
+                            })()}
+                          </div>
                         </div>
                       </div>
                       <div className="mt-3 rounded-lg border border-dashed border-slate-300 p-3">
@@ -497,13 +519,12 @@ export default function TableauxAluminiumPage() {
                     })}
                     {customItems.map((it, idx) => {
                       const qty = it.qty || 0
-                      const hasPrice = typeof it.price === 'number'
-                      const unit = hasPrice ? (it.price as number) : 0
+                      const unit = computeCustomUnitPrice(it.width, it.height)
                       const dims = `${it.width || '?'}×${it.height || '?'} cm`
                       return (
                         <div key={it.id} className="flex justify-between">
                           <span>Perso #{idx + 1} ({dims}) × {qty}</span>
-                          <span>{hasPrice ? (unit * qty).toLocaleString() + ' FCFA' : 'devis'}</span>
+                          <span>{unit > 0 ? (unit * qty).toLocaleString() + ' FCFA' : '—'}</span>
                         </div>
                       )
                     })}
