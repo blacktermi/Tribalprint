@@ -1,27 +1,6 @@
 import { useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-
-type Product = {
-  id: string
-  name: string
-  path: string
-  cover: string
-  tags: string[]
-  featured?: boolean
-}
-
-const PRODUCTS: Product[] = [
-  { id: 'aluminium', name: 'Tableaux Aluminium', path: '/tableauxpersonnaliser', cover: '/img/tableaux-cover.jpg', tags: ['tableau','aluminium','mur','metal','alu'], featured: true },
-  { id: 'canvas', name: 'Canvas', path: '/canvas', cover: '/img/canvas-cover.jpg', tags: ['canvas','toile','mur','tableau'], featured: true },
-  { id: 'metalposter', name: 'Metal Poster', path: '/metalposter', cover: '/img/metalposter-cover.jpg', tags: ['poster','metal','mur','deco'], featured: true },
-  { id: 'bois', name: 'Tableaux Bois', path: '/Tableauxebeneprestige', cover: '/img/tableaux-bois-cover.jpg', tags: ['tableau','bois','mur'] },
-  { id: 'posters', name: 'Posters papier', path: '/posters', cover: '/img/posters-cover.jpg', tags: ['poster','papier','photo'] },
-  { id: 'album', name: 'Album photos', path: '/Albumphoto', cover: '/img/albumphoto-cover.jpg', tags: ['album','photo','livre'] },
-  { id: 'polaroids', name: 'Polaroïds', path: '/polaroids', cover: '/img/polaroid-cover.jpg', tags: ['polaroid','photo','mini'] },
-  { id: 'miniphoto', name: 'Mini Photo', path: '/miniphoto', cover: '/img/miniphoto-cover.jpg', tags: ['mini','photo'] },
-  { id: 'photocarte', name: 'Photo Carte', path: '/photocarte', cover: '/img/photocarte-cover.jpg', tags: ['photo','carte'] },
-  { id: 'photostrips', name: 'Photo Strips', path: '/photostrips', cover: '/img/photostrips-cover.jpg', tags: ['photo','strips','bande'] },
-]
+import { PRODUCTS, CATEGORIES, type Product } from '../shared/catalog'
 
 export default function BoutiquePage() {
   const [params] = useSearchParams()
@@ -30,13 +9,20 @@ export default function BoutiquePage() {
   const featured = useMemo(() => PRODUCTS.filter(p => p.featured), [])
   const all = useMemo(() => PRODUCTS, [])
 
+  const [cat, sortBy] = [params.get('cat') as Product['category'] | null, params.get('sort')]
+
   const filtered = useMemo(() => {
-    if (!q) return all
-    return all.filter(p => {
-      const hay = (p.name + ' ' + p.tags.join(' ')).toLowerCase()
-      return hay.includes(q)
-    })
-  }, [q, all])
+    let res = all
+    if (q) {
+      res = res.filter(p => {
+        const hay = (p.name + ' ' + p.tags.join(' ')).toLowerCase()
+        return hay.includes(q)
+      })
+    }
+    if (cat && CATEGORIES.some(c => c.key === cat)) res = res.filter(p => p.category === cat)
+    if (sortBy === 'name') res = [...res].sort((a, b) => a.name.localeCompare(b.name))
+    return res
+  }, [q, all, cat, sortBy])
 
   const hasQuery = q.length > 0
   const title = hasQuery ? `Résultats pour « ${q} »` : 'Tous les produits'
@@ -44,6 +30,17 @@ export default function BoutiquePage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <h1 className="text-2xl font-semibold tracking-tight">Boutique</h1>
+      {/* En stock (mise en avant sur 3 séries: MC, TB, MT) */}
+      {!hasQuery && (
+        <div className="mt-6">
+          <h2 className="text-lg font-semibold">En stock — Tableaux prêts à commander</h2>
+          <div className="mt-3 grid gap-4 lg:grid-cols-3">
+            <StockColumn title="MC (Metal Posters)" items={[1,2,3,4,5,6].map(n => ({src: `/img/MC${n}.jpg`, to: `/boutique/stock/metal/MC${n}`}))} />
+            <StockColumn title="TB (Tableaux Bois)" items={[1,2,3,4,5,6].map(n => ({src: `/img/TB${n}.jpg`, to: `/boutique/stock/bois/TB${n}`}))} />
+            <StockColumn title="MT (Tableaux Aluminium)" items={[1,2,3,4,5,6].map(n => ({src: `/img/MT-${n}.jpg`, to: `/boutique/stock/aluminium/MT-${n}`}))} />
+          </div>
+        </div>
+      )}
       {!hasQuery && (
         <div className="mt-6">
           <h2 className="text-lg font-semibold">En avant</h2>
@@ -54,7 +51,29 @@ export default function BoutiquePage() {
       )}
 
       <div className="mt-8">
-        <h2 className="text-lg font-semibold">{title}</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <div className="flex items-center gap-2 text-sm">
+            <select className="rounded-md border border-slate-300 px-2 py-1" value={cat || ''} onChange={(e) => {
+              const v = e.target.value
+              const url = new URL(window.location.href)
+              if (v) url.searchParams.set('cat', v); else url.searchParams.delete('cat')
+              window.history.replaceState({}, '', url.toString())
+            }}>
+              <option value="">Toutes catégories</option>
+              {CATEGORIES.map(c => (<option key={c.key} value={c.key}>{c.label}</option>))}
+            </select>
+            <select className="rounded-md border border-slate-300 px-2 py-1" value={sortBy || ''} onChange={(e) => {
+              const v = e.target.value
+              const url = new URL(window.location.href)
+              if (v) url.searchParams.set('sort', v); else url.searchParams.delete('sort')
+              window.history.replaceState({}, '', url.toString())
+            }}>
+              <option value="">Tri</option>
+              <option value="name">Nom (A→Z)</option>
+            </select>
+          </div>
+        </div>
         {filtered.length === 0 ? (
           <div className="mt-3 text-sm text-slate-600">Aucun résultat. Essayez d’autres mots-clés (ex: tableau, canvas, poster, album…).</div>
         ) : (
@@ -77,5 +96,20 @@ function ProductCard({ product }: { product: Product }) {
         <div className="font-medium">{product.name}</div>
       </div>
     </Link>
+  )
+}
+
+function StockColumn({ title, items }: { title: string; items: { src: string; to: string }[] }) {
+  return (
+    <div>
+      <div className="mb-2 text-sm font-medium text-slate-700">{title}</div>
+      <div className="grid grid-cols-3 gap-2">
+        {items.map((it) => (
+          <Link key={it.to} to={it.to} className="block overflow-hidden rounded border border-slate-200 hover:shadow-sm">
+            <img src={it.src} alt={title} className="h-24 w-full object-cover" />
+          </Link>
+        ))}
+      </div>
+    </div>
   )
 }

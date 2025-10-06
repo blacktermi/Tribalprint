@@ -18,6 +18,7 @@ import MetalPosterPage from './pages/MetalPosterPage'
 import PostersPage from './pages/PostersPage'
 import PolaroidsPage from './pages/PolaroidsPage'
 import BoutiquePage from './pages/BoutiquePage'
+import StockProductPage from './pages/StockProductPage'
 
 const router = createBrowserRouter([
   {
@@ -39,6 +40,7 @@ const router = createBrowserRouter([
   { path: 'posters', element: <PostersPage /> },
   { path: 'metalposter', element: <MetalPosterPage /> },
   { path: 'boutique', element: <BoutiquePage /> },
+  { path: 'boutique/stock/:kind/:id', element: <StockProductPage /> },
       { path: 'cartedevistite', element: <PlaceholderPage title="Carte de visite" /> },
       { path: 'carteinvitation', element: <PlaceholderPage title="Carte d\'invitation" /> },
       { path: 'carteremerciment', element: <PlaceholderPage title="Carte de remerciement" /> },

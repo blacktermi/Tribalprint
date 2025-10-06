@@ -1,7 +1,15 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { PRODUCTS } from './catalog'
 
 export default function AppLayout() {
   const navigate = useNavigate()
+  const [q, setQ] = useState('')
+  const suggestions = useMemo(() => {
+    const s = q.trim().toLowerCase()
+    if (!s) return [] as { name: string; path: string }[]
+    return PRODUCTS.filter(p => (p.name + ' ' + p.tags.join(' ')).toLowerCase().includes(s)).slice(0, 6).map(p => ({ name: p.name, path: p.path }))
+  }, [q])
   const onSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = e.currentTarget
@@ -23,10 +31,21 @@ export default function AppLayout() {
                     className="w-full rounded-full border border-slate-300 bg-white px-5 py-3 text-[15px] outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                     placeholder="Rechercher un produit, une catégorie..."
                     name="q"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
                   />
                   <button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full px-3 py-1.5 text-slate-600 hover:text-slate-800">
                     <i className="fas fa-search"></i>
                   </button>
+                  {suggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full mt-2 z-40 rounded-md border border-slate-200 bg-white shadow-lg overflow-hidden">
+                      {suggestions.map((s) => (
+                        <button key={s.path} type="button" onClick={() => navigate(s.path)} className="w-full text-left px-4 py-2 text-sm hover:bg-slate-100">
+                          {s.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </form>
             </div>
