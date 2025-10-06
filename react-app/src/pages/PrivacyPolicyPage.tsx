@@ -1,10 +1,11 @@
+import SectionHeader from '../components/SectionHeader'
+import LegalContainer from '../components/LegalContainer'
+
 export default function PrivacyPolicyPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="text-2xl font-semibold tracking-tight">Politique de Confidentialité</h1>
-      <p className="mt-2 text-sm text-slate-600">Dernière mise à jour: 2025</p>
-
-      <section className="prose prose-sm max-w-none mt-6">
+    <div className="mx-auto max-w-6xl px-4 py-8">
+      <SectionHeader title="Politique de Confidentialité" subtitle="Comment nous collectons, utilisons et protégeons vos données" />
+      <LegalContainer>
         <h2>1. Introduction</h2>
         <p>Chez Tribal Print, nous nous engageons à protéger la confidentialité de vos informations personnelles. Cette politique de confidentialité explique comment nous collectons, utilisons, divulguons et protégeons vos données.</p>
 
@@ -52,7 +53,7 @@ export default function PrivacyPolicyPage() {
 
         <h2>10. Nous Contacter</h2>
         <p>Email: <a href="mailto:info.tribalprint@gmail.com">info.tribalprint@gmail.com</a><br />Téléphone: <a href="tel:+2250787502637">+225 07 87 50 26 37</a></p>
-      </section>
+      </LegalContainer>
     </div>
   )
 }

@@ -1,10 +1,11 @@
+import SectionHeader from '../components/SectionHeader'
+import LegalContainer from '../components/LegalContainer'
+
 export default function TermsPage() {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
-      <h1 className="text-2xl font-semibold tracking-tight">Conditions Générales d'Utilisation et de Vente</h1>
-      <p className="mt-2 text-sm text-slate-600">Bienvenue chez Tribal Print !</p>
-
-      <section className="prose prose-sm max-w-none mt-6">
+    <div className="mx-auto max-w-6xl px-4 py-8">
+      <SectionHeader title="Conditions Générales d'Utilisation et de Vente" subtitle="Les règles applicables à vos commandes et à l'utilisation du site" />
+      <LegalContainer>
         <h2>1. Objet</h2>
         <p>Les présentes CGV définissent les droits et obligations des parties dans le cadre de la vente des produits proposés par Tribal Print, notamment les tableaux personnalisés, photos Polaroïd, photo strips, mini photos, et autres produits de personnalisation.</p>
 
@@ -54,7 +55,7 @@ export default function TermsPage() {
         <p>Email: <a href="mailto:info.tribalprint@gmail.com">info.tribalprint@gmail.com</a><br />Téléphone: <a href="tel:+2250787502637">+225 07 87 50 26 37</a></p>
 
         <p className="mt-6 text-xs text-slate-500">© 2025 Tribal Print. Tous droits réservés.</p>
-      </section>
+      </LegalContainer>
     </div>
   )
 }
