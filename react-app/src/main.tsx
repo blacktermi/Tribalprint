@@ -17,6 +17,7 @@ import CanvasPage from './pages/CanvasPage'
 import MetalPosterPage from './pages/MetalPosterPage'
 import PostersPage from './pages/PostersPage'
 import PolaroidsPage from './pages/PolaroidsPage'
+import BoutiquePage from './pages/BoutiquePage'
 
 const router = createBrowserRouter([
   {
@@ -37,6 +38,7 @@ const router = createBrowserRouter([
   { path: 'canvas', element: <CanvasPage /> },
   { path: 'posters', element: <PostersPage /> },
   { path: 'metalposter', element: <MetalPosterPage /> },
+  { path: 'boutique', element: <BoutiquePage /> },
       { path: 'cartedevistite', element: <PlaceholderPage title="Carte de visite" /> },
       { path: 'carteinvitation', element: <PlaceholderPage title="Carte d\'invitation" /> },
       { path: 'carteremerciment', element: <PlaceholderPage title="Carte de remerciement" /> },

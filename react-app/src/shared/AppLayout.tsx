@@ -1,6 +1,14 @@
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
 
 export default function AppLayout() {
+  const navigate = useNavigate()
+  const onSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const form = e.currentTarget
+    const input = form.querySelector('input[name="q"]') as HTMLInputElement | null
+    const q = (input?.value || '').trim()
+    navigate(`/boutique${q ? `?q=${encodeURIComponent(q)}` : ''}`)
+  }
   return (
     <div className="min-h-dvh flex flex-col bg-white text-slate-900">
       {/* Header sticky minimaliste */}
@@ -9,11 +17,12 @@ export default function AppLayout() {
           <div className="flex h-14 items-center gap-4">
             <NavLink to="/" className="font-bold text-lg tracking-tight">Tribal Print</NavLink>
             <div className="flex-1">
-              <form role="search">
+              <form role="search" onSubmit={onSearchSubmit}>
                 <div className="relative">
                   <input
                     className="w-full rounded-full border border-slate-300 bg-white px-5 py-3 text-[15px] outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                     placeholder="Rechercher un produit, une catégorie..."
+                    name="q"
                   />
                   <button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full px-3 py-1.5 text-slate-600 hover:text-slate-800">
                     <i className="fas fa-search"></i>
@@ -62,6 +71,9 @@ export default function AppLayout() {
                 <NavLink to="/Tableauxebeneprestige" className="block rounded px-3 py-2 hover:bg-slate-100">Tableaux Bois</NavLink>
               </div>
             </div>
+
+            {/* Boutique (mise en avant) */}
+            <NavLink to="/boutique" className="hover:text-slate-900">BOUTIQUE</NavLink>
 
             {/* Canvas (no dropdown) */}
             <NavLink to="/canvas" className="hover:text-slate-900">CANVAS</NavLink>
