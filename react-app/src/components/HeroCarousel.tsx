@@ -38,7 +38,7 @@ const slides: Slide[] = [
       { label: 'Tableaux Aluminium', to: '/tableauxpersonnaliser', style: 'primary' },
       { label: 'Tableaux Bois', to: '/Tableauxebeneprestige', style: 'secondary' },
     ],
-    img: '/img/tableaux-cover.jpg',
+  img: '/img/tableaux-bois-cover.jpg',
     alt: 'Tableaux muraux',
   },
 ]

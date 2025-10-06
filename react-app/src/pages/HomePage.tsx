@@ -18,7 +18,7 @@ export default function HomePage() {
           {[
             { img: '/img/polaroid-cover.jpg', title: 'Polaroïds', to: '/polaroids', badge: 'Best-seller' },
             { img: '/img/albumphoto-cover.jpg', title: 'Album Photo', to: '/Albumphoto', badge: 'Nouveau' },
-            { img: '/img/tableaux-cover.jpg', title: 'Tableaux', to: '/tableauxpersonnaliser' },
+            { img: '/img/tableaux-bois-cover.jpg', title: 'Tableaux', to: '/tableauxpersonnaliser' },
             { img: '/img/posters-cover.jpg', title: 'Posters', to: '/posters' },
             { img: '/img/metalposter-cover.jpg', title: 'Metal Poster', to: '/metalposter' },
             { img: '/img/canvas-cover.jpg', title: 'Canvas', to: '/canvas' },

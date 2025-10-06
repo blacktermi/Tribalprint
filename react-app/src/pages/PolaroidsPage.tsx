@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { computeNextDelivery } from '../shared/delivery'
 
 type Zone = 1 | 2 | 3
 type Pack = 'pola20' | 'pola20txt'
@@ -67,6 +68,7 @@ export default function PolaroidsPage() {
   const delivery = useMemo(() => DELIVERY[zone], [zone])
   const subtotal = packPrice * qty
   const total = subtotal + delivery
+  const deliveryInfo = useMemo(() => computeNextDelivery(), [])
   const minPhotos = 20 * qty
 
   const phoneValid = useMemo(() => {
@@ -128,9 +130,11 @@ export default function PolaroidsPage() {
       orientation,
       border,
       textFilled: String(textFilled),
+      delivery_date: deliveryInfo.iso,
+      delivery_window: deliveryInfo.window,
     })
     return `/confirmation?${params.toString()}`
-  }, [pack, qty, zone, commune, subtotal, delivery, total, fullName, phone, photos.length, colorMode, finish, orientation, border, textFilled])
+  }, [pack, qty, zone, commune, subtotal, delivery, total, fullName, phone, photos.length, colorMode, finish, orientation, border, textFilled, deliveryInfo.iso, deliveryInfo.window])
 
   const handleOrder = () => {
     if (!formValid) {
@@ -428,7 +432,7 @@ export default function PolaroidsPage() {
               <div className="flex justify-between"><span>Livraison (zone {zone})</span><span>{delivery.toLocaleString()} FCFA</span></div>
                 <div className="flex justify-between text-slate-600"><span>Commune</span><span>{commune}</span></div>
                 <div className="flex justify-between text-slate-600"><span>Options</span><span>{colorMode === 'couleur' ? 'Couleur' : 'Noir & Blanc'} • {finish === 'brillant' ? 'Brillant' : 'Mat'} • {orientation === 'portrait' ? 'Portrait' : 'Paysage'} • {border === 'avec' ? 'Avec bord' : 'Sans bord'}</span></div>
-              <div className="mt-2 border-t pt-2 flex justify-between font-semibold text-slate-900"><span>Total</span><span>{total.toLocaleString()} FCFA</span></div>
+              <div className="mt-2 border-t pt-2 flex justify-between font-semibold text-slate-900"><span>Total — Livraison: <span className="font-bold">{deliveryInfo.label.split(' ')[0]}</span> {deliveryInfo.label.split(' ').slice(1).join(' ')} ({deliveryInfo.window})</span><span>{total.toLocaleString()} FCFA</span></div>
             </div>
 
             {/* CTA */}
@@ -446,7 +450,7 @@ export default function PolaroidsPage() {
                 Commander
               </button>
               <a href="/Albumphoto" className="rounded-full border border-slate-300 px-5 py-2 text-sm hover:border-slate-400">Album Photo</a>
-              <div className="text-xs text-slate-600">Contact: +225 07 87 50 26 37 — Livraison Mercredi & Samedi (14h–18h)</div>
+              <div className="text-xs text-slate-600">Contact: +225 07 87 50 26 37 — Prochaine livraison: <strong>{deliveryInfo.label.split(' ')[0]}</strong> {deliveryInfo.label.split(' ').slice(1).join(' ')} ({deliveryInfo.window})</div>
             </div>
           </div>
         </div>

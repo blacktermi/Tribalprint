@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { COMMUNES, DELIVERY, Zone } from '../shared/delivery'
+import { COMMUNES, DELIVERY, Zone, computeNextDelivery } from '../shared/delivery'
 export type ColorMode = 'couleur' | 'noirblanc'
 export type Finish = 'brillant' | 'mat'
 export type Orientation = 'portrait' | 'paysage'
@@ -43,6 +43,7 @@ export default function CategoryBaseForm({ title, packOptions, bannerSrc, getBan
   const [touched, setTouched] = useState(false)
 
   const delivery = useMemo(() => DELIVERY[zone], [zone])
+  const deliveryInfo = useMemo(() => computeNextDelivery(), [])
   const packPrice = selectedPack?.price ?? 0
   const subtotal = packPrice * qty
   const total = subtotal + delivery
@@ -99,9 +100,11 @@ export default function CategoryBaseForm({ title, packOptions, bannerSrc, getBan
       finish,
       orientation,
       border,
+      delivery_date: deliveryInfo.iso,
+      delivery_window: deliveryInfo.window,
     })
     return `/confirmation?${params.toString()}`
-  }, [title, selectedPack?.label, selectedPack?.id, qty, zone, commune, subtotal, delivery, total, fullName, phone, photos.length, colorMode, finish, orientation, border])
+  }, [title, selectedPack?.label, selectedPack?.id, qty, zone, commune, subtotal, delivery, total, fullName, phone, photos.length, colorMode, finish, orientation, border, deliveryInfo.iso, deliveryInfo.window])
 
   const banner = getBannerSrc ? getBannerSrc(selectedPackId) : bannerSrc || '/img/banner.jpg'
 
@@ -241,14 +244,14 @@ export default function CategoryBaseForm({ title, packOptions, bannerSrc, getBan
               <div className="flex justify-between"><span>Livraison (zone {zone})</span><span>{delivery.toLocaleString()} FCFA</span></div>
               <div className="flex justify-between text-slate-600"><span>Commune</span><span>{commune}</span></div>
               <div className="flex justify-between text-slate-600"><span>Options</span><span>{colorMode === 'couleur' ? 'Couleur' : 'Noir & Blanc'} • {finish === 'brillant' ? 'Brillant' : 'Mat'} • {orientation === 'portrait' ? 'Portrait' : 'Paysage'} • {border === 'avec' ? 'Avec bord' : 'Sans bord'}</span></div>
-              <div className="mt-2 border-t pt-2 flex justify-between font-semibold text-slate-900"><span>Total</span><span>{total.toLocaleString()} FCFA</span></div>
+              <div className="mt-2 border-t pt-2 flex justify-between font-semibold text-slate-900"><span>Total — Livraison: <span className="font-bold">{deliveryInfo.label.split(' ')[0]}</span> {deliveryInfo.label.split(' ').slice(1).join(' ')} ({deliveryInfo.window})</span><span>{total.toLocaleString()} FCFA</span></div>
             </div>
 
             <div className="flex flex-wrap gap-3 items-center">
               <button type="button" onClick={() => { if (!formValid) { setTouched(true); return } navigate(confirmationTo) }} disabled={!formValid} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`} aria-disabled={!formValid} title={!formValid ? 'Ajoutez les photos et complétez vos informations' : 'Passer à la confirmation'}>
                 Commander
               </button>
-              <div className="text-xs text-slate-600">Contact: +225 07 87 50 26 37 — Livraison Mercredi & Samedi (14h–18h)</div>
+              <div className="text-xs text-slate-600">Contact: +225 07 87 50 26 37 — Livraison Mercredi & Samedi ({deliveryInfo.window})</div>
             </div>
           </div>
         </div>

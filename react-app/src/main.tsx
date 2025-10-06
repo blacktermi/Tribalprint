@@ -12,6 +12,10 @@ import { Navigate } from 'react-router-dom'
 import AboutPage from './pages/AboutPage'
 import AlbumPhotoPage from './pages/AlbumPhotoPage'
 import TableauxAluminiumPage from './pages/TableauxAluminiumPage'
+import TableauxBoisPage from './pages/TableauxBoisPage'
+import CanvasPage from './pages/CanvasPage'
+import MetalPosterPage from './pages/MetalPosterPage'
+import PostersPage from './pages/PostersPage'
 import PolaroidsPage from './pages/PolaroidsPage'
 
 const router = createBrowserRouter([
@@ -29,10 +33,10 @@ const router = createBrowserRouter([
     { path: 'Albumphoto', element: <AlbumPhotoPage /> },
       { path: 'albumphoto', element: <Navigate to="/Albumphoto" replace /> },
   { path: 'tableauxpersonnaliser', element: <TableauxAluminiumPage /> },
-      { path: 'Tableauxebeneprestige', element: <PlaceholderPage title="Tableaux Bois" /> },
-      { path: 'canvas', element: <PlaceholderPage title="Canvas" /> },
-      { path: 'posters', element: <PlaceholderPage title="Posters papier" /> },
-      { path: 'metalposter', element: <PlaceholderPage title="Metal Posters" /> },
+  { path: 'Tableauxebeneprestige', element: <TableauxBoisPage /> },
+  { path: 'canvas', element: <CanvasPage /> },
+  { path: 'posters', element: <PostersPage /> },
+  { path: 'metalposter', element: <MetalPosterPage /> },
       { path: 'cartedevistite', element: <PlaceholderPage title="Carte de visite" /> },
       { path: 'carteinvitation', element: <PlaceholderPage title="Carte d\'invitation" /> },
       { path: 'carteremerciment', element: <PlaceholderPage title="Carte de remerciement" /> },

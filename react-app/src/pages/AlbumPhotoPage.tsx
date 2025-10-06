@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { computeNextDelivery } from '../shared/delivery'
 
 type Zone = 1 | 2 | 3
 type AlbumFormat = 'A5' | 'A4'
 type ProductType = 'album' | 'magazine' | 'document'
+type CoverFinish = 'brillant' | 'mat'
 
 // Politique de prix: base pour 10 pages (20 photos), supplément par page au-delà
 const BASE_PRICE: Record<AlbumFormat, number> = { A5: 10000, A4: 15000 }
@@ -51,6 +53,7 @@ export default function AlbumPhotoPage() {
   const [pages, setPages] = useState<number>(10) // 20 photos = 10 pages (1 page pour 2 photos)
   const [coverText, setCoverText] = useState<string>('')
   const [coverImage, setCoverImage] = useState<File | null>(null)
+  const [coverFinish, setCoverFinish] = useState<CoverFinish>('brillant')
 
   // Photos à importer (intérieures)
   const [photos, setPhotos] = useState<File[]>([])
@@ -82,6 +85,7 @@ export default function AlbumPhotoPage() {
   const delivery = useMemo(() => DELIVERY[zone], [zone])
   const subtotal = price * qty
   const total = subtotal + delivery
+  const deliveryInfo = useMemo(() => computeNextDelivery(), [])
   // 1 page = 2 photos (non utilisé pour album; pour album on valide la divisibilité des photos)
   const minPhotos = useMemo(() => (prodType === 'album' ? 0 : pages * 2 * qty), [prodType, pages, qty])
 
@@ -157,9 +161,12 @@ export default function AlbumPhotoPage() {
       coverText: coverText.trim(),
       coverImage: coverImage ? '1' : '0',
       pdf: pdfFile ? '1' : '0',
+      coverFinish,
+      delivery_date: deliveryInfo.iso,
+      delivery_window: deliveryInfo.window,
     })
     return `/confirmation?${params.toString()}`
-  }, [prodType, format, qty, zone, commune, pages, subtotal, delivery, total, fullName, phone, photos.length, coverText, coverImage, pdfFile])
+  }, [prodType, format, qty, zone, commune, pages, subtotal, delivery, total, fullName, phone, photos.length, coverText, coverImage, pdfFile, coverFinish, deliveryInfo.iso, deliveryInfo.window])
 
   const handleOrder = () => {
     if (!formValid) {
@@ -320,6 +327,21 @@ export default function AlbumPhotoPage() {
                       placeholder="Votre texte sur la couverture (ex: Nos souvenirs 2025)"
                     />
                   </div>
+                  <div className="md:col-span-2">
+                    <div className="text-sm font-medium mb-2">Pelliculage de couverture</div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCoverFinish('brillant')}
+                        className={`rounded-full border px-3 py-1.5 text-sm ${coverFinish === 'brillant' ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:border-slate-400'}`}
+                      >Brillant</button>
+                      <button
+                        type="button"
+                        onClick={() => setCoverFinish('mat')}
+                        className={`rounded-full border px-3 py-1.5 text-sm ${coverFinish === 'mat' ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:border-slate-400'}`}
+                      >Mat</button>
+                    </div>
+                  </div>
                 </>
               ) : (
                 <div className="md:col-span-2">
@@ -430,9 +452,13 @@ export default function AlbumPhotoPage() {
               <div className="flex justify-between"><span>Sous-total</span><span>{subtotal.toLocaleString()} FCFA</span></div>
               <div className="flex justify-between"><span>Livraison (zone {zone})</span><span>{delivery.toLocaleString()} FCFA</span></div>
               <div className="flex justify-between text-slate-600"><span>Commune</span><span>{commune}</span></div>
+              <div className="flex justify-between text-slate-600"><span>Date de livraison</span><span><strong>{deliveryInfo.label.split(' ')[0]}</strong> {deliveryInfo.label.split(' ').slice(1).join(' ')} • {deliveryInfo.window}</span></div>
               <div className="flex justify-between text-slate-600"><span>Format</span><span>{format} • {prodType === 'album' ? albumPages : pages} pages</span></div>
+              {prodType === 'album' && (
+                <div className="flex justify-between text-slate-600"><span>Pelliculage couverture</span><span>{coverFinish === 'brillant' ? 'Brillant' : 'Mat'}</span></div>
+              )}
               <div className="flex justify-between text-slate-600"><span>Type</span><span>{prodType === 'album' ? 'Album photo' : prodType === 'magazine' ? 'Magazine (PDF)' : 'Document (PDF)'} {pdfFile ? '• PDF fourni' : ''}</span></div>
-              <div className="mt-2 border-t pt-2 flex justify-between font-semibold text-slate-900"><span>Total</span><span>{total.toLocaleString()} FCFA</span></div>
+              <div className="mt-2 border-t pt-2 flex justify-between font-semibold text-slate-900"><span>Total — Livraison: <span className="font-bold">{deliveryInfo.label.split(' ')[0]}</span> {deliveryInfo.label.split(' ').slice(1).join(' ')} ({deliveryInfo.window})</span><span>{total.toLocaleString()} FCFA</span></div>
             </div>
 
             {/* CTA */}
@@ -450,7 +476,7 @@ export default function AlbumPhotoPage() {
                 Commander
               </button>
               <a href="/polaroids" className="rounded-full border border-slate-300 px-5 py-2 text-sm hover:border-slate-400">Polaroïds</a>
-              <div className="text-xs text-slate-600">Contact: +225 07 87 50 26 37 — Livraison Mercredi & Samedi (14h–18h)</div>
+              <div className="text-xs text-slate-600">Contact: +225 07 87 50 26 37 — Livraison Mercredi & Samedi ({deliveryInfo.window})</div>
             </div>
           </div>
         </div>
