@@ -2,8 +2,6 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { computeNextDelivery, DELIVERY, COMMUNES, type Zone } from '../shared/delivery'
 import UploadBox from '../components/UploadBox'
-import { api, isApiConfigured } from '../lib/api/client'
-import { buildOrderPayload } from '../lib/api/buildOrderPayload'
 
 type Impression = 'recto' | 'recto-verso'
 
@@ -12,7 +10,6 @@ export default function CarteRemerciementPage() {
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
-  const [submitting, setSubmitting] = useState(false)
   const [packs, setPacks] = useState(1) // 1 pack = 100 cartes
   const [pelliculage, setPelliculage] = useState<'mat' | 'brillant'>('mat')
   const [impression, setImpression] = useState<Impression>('recto-verso')
@@ -44,28 +41,6 @@ export default function CarteRemerciementPage() {
   const params = new URLSearchParams({ product: 'carte-remerciement', packs: String(packs), pack_size: '100', impression, format: '10x10', pelliculage, bords_arrondis: String(bordsArrondis), zone: String(zone), commune, subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), name: fullName.trim(), phone: phone.trim(), email: email.trim(), has_file: String(!!file), file_name: file?.name || '', file_type: file?.type || '', delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
     return `/confirmation?${params.toString()}`
   }, [packs, pelliculage, bordsArrondis, zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, email, deliveryInfo.iso, deliveryInfo.window])
-
-  async function handleOrder() {
-    if (!formValid) return
-    if (!isApiConfigured()) { navigate(confirmationTo); return }
-    try {
-      setSubmitting(true)
-      const payload = buildOrderPayload({
-        contact: { name: fullName.trim(), phone: phone.trim(), email: email.trim() || undefined },
-        delivery: { zone, commune, date: deliveryInfo.iso, window: deliveryInfo.window },
-        items: [{ product_slug: 'carte-remerciement', product_label: 'Cartes de remerciement', quantity: packs * 100, unit_price: unitPackPrice / 100, options: { format: '10x10', impression, pelliculage, bords_arrondis: bordsArrondis, packs } }],
-        uploads: file ? [{ original_name: file.name, mime_type: file.type }] : undefined,
-        pricing: { subtotal, discount: discountAmount, delivery_fee: delivery, total },
-      })
-      const res = await api.createOrder(payload)
-      const url = new URL(confirmationTo, window.location.origin)
-      if (res.ref) url.searchParams.set('ref', res.ref)
-      navigate(url.pathname + '?' + url.searchParams.toString())
-    } catch (e) {
-      console.error('createOrder failed, fallback:', e)
-      navigate(confirmationTo)
-    } finally { setSubmitting(false) }
-  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -164,7 +139,7 @@ export default function CarteRemerciementPage() {
               {total > 20000 && (<div className="flex justify-between text-slate-800"><span>Acompte (30%) à régler</span><span>{Math.round(total * 0.30).toLocaleString()} FCFA</span></div>)}
             </div>
 
-            <button type="button" onClick={handleOrder} disabled={!formValid || submitting} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>{submitting ? 'Envoi…' : 'Commander'}</button>
+            <button type="button" onClick={() => formValid && navigate(confirmationTo)} disabled={!formValid} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>Commander</button>
           </div>
         </div>
       </div>

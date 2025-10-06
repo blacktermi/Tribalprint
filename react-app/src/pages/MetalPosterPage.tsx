@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { computeNextDelivery } from '../shared/delivery'
-import { api, isApiConfigured } from '../lib/api/client'
-import { buildOrderPayload } from '../lib/api/buildOrderPayload'
 
 type Zone = 1 | 2 | 3
 
@@ -25,7 +23,6 @@ export default function MetalPosterPage() {
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
-  const [submitting, setSubmitting] = useState(false)
   const [zone, setZone] = useState<Zone>(1)
   const [commune, setCommune] = useState<string>(COMMUNES[1][0])
 
@@ -72,34 +69,7 @@ export default function MetalPosterPage() {
     return `/confirmation?${params.toString()}`
   }, [zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, email, quantities, photosByFormat])
 
-  async function handleOrder() {
-    setTouched(true)
-    if (!formValid) return
-    if (!isApiConfigured()) { navigate(confirmationTo); return }
-    try {
-      setSubmitting(true)
-      const items = FORMATS.filter(f => quantities[f.code] > 0).map(f => ({
-        product_slug: 'metalposter',
-        product_label: 'Metal Poster',
-        quantity: quantities[f.code],
-        unit_price: f.price,
-        options: { format: f.code, photos_count: photosByFormat[f.code]?.length || 0 },
-      }))
-      const payload = buildOrderPayload({
-        contact: { name: fullName.trim(), phone: phone.trim(), email: email.trim() || undefined },
-        delivery: { zone, commune, date: deliveryInfo.iso, window: deliveryInfo.window },
-        items,
-        pricing: { subtotal, discount: discountAmount, delivery_fee: delivery, total },
-      })
-      const res = await api.createOrder(payload)
-      const url = new URL(confirmationTo, window.location.origin)
-      if (res.ref) url.searchParams.set('ref', res.ref)
-      navigate(url.pathname + '?' + url.searchParams.toString())
-    } catch (e) {
-      console.error('createOrder failed, fallback:', e)
-      navigate(confirmationTo)
-    } finally { setSubmitting(false) }
-  }
+  const handleOrder = () => { setTouched(true); if (!formValid) return; navigate(confirmationTo) }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -229,7 +199,7 @@ export default function MetalPosterPage() {
             </div>
 
             <div className="flex flex-wrap gap-3 items-center">
-              <button type="button" onClick={handleOrder} disabled={!formValid || submitting} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>{submitting ? 'Envoi…' : 'Commander'}</button>
+              <button type="button" onClick={handleOrder} disabled={!formValid} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>Commander</button>
             </div>
           </div>
         </div>
