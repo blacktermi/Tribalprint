@@ -21,6 +21,8 @@ const FORMAT_OPTIONS: Record<Kind, FormatOption[]> = {
   ],
   // Aluminium: aligne sur la page TableauxAluminium (A2/A1/A0)
   aluminium: [
+    { code: 'A4', label: 'A4 — 21 × 30 cm', size: '21 × 30 cm', price: 10000 },
+    { code: 'A3', label: 'A3 — 32 × 48 cm', size: '32 × 48 cm', price: 15000 },
     { code: 'A2', label: 'A2 — 42 × 60 cm', size: '42 × 60 cm', price: 45000 },
     { code: 'A1', label: 'A1 — 60 × 85 cm', size: '60 × 85 cm', price: 65000 },
     { code: 'A0', label: 'A0 — 85 × 119 cm', size: '85 × 119 cm', price: 85000 },
