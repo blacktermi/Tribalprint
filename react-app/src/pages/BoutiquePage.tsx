@@ -44,7 +44,7 @@ export default function BoutiquePage() {
       {!hasQuery && (
         <div className="mt-8 space-y-8">
           <StockSection title="MC — Metal Posters en stock" items={[1,2,3,4,5,6].map(n => ({src: `/img/MC${n}.jpg`, to: `/boutique/stock/metal/MC${n}`}))} />
-          <StockSection title="TB — Tableaux Bois en stock" items={[1,2,3,4,5,6].map(n => ({src: `/img/TB${n}.jpg`, to: `/boutique/stock/bois/TB${n}`}))} />
+          <StockSection title="TB — Tableaux Aluminium en stock" items={[1,2,3,4,5,6].map(n => ({src: `/img/TB${n}.jpg`, to: `/boutique/stock/aluminium/TB${n}`}))} />
           <StockSection title="MT — Tableaux Aluminium en stock" items={[1,2,3,4,5,6].map(n => ({src: `/img/MT-${n}.jpg`, to: `/boutique/stock/aluminium/MT-${n}`}))} />
         </div>
       )}
