@@ -19,6 +19,13 @@ import PostersPage from './pages/PostersPage'
 import PolaroidsPage from './pages/PolaroidsPage'
 import BoutiquePage from './pages/BoutiquePage'
 import StockProductPage from './pages/StockProductPage'
+import CarteVisitePage from './pages/CarteVisitePage'
+import CarteInvitationPage from './pages/CarteInvitationPage'
+import CarteRemerciementPage from './pages/CarteRemerciementPage'
+import FlyersPage from './pages/FlyersPage'
+import PlaquettePage from './pages/PlaquettePage'
+import EtiquettePage from './pages/EtiquettePage'
+import StickersPage from './pages/StickersPage'
 
 const router = createBrowserRouter([
   {
@@ -41,13 +48,13 @@ const router = createBrowserRouter([
   { path: 'metalposter', element: <MetalPosterPage /> },
   { path: 'boutique', element: <BoutiquePage /> },
   { path: 'boutique/stock/:kind/:id', element: <StockProductPage /> },
-      { path: 'cartedevistite', element: <PlaceholderPage title="Carte de visite" /> },
-      { path: 'carteinvitation', element: <PlaceholderPage title="Carte d\'invitation" /> },
-      { path: 'carteremerciment', element: <PlaceholderPage title="Carte de remerciement" /> },
-      { path: 'flyers', element: <PlaceholderPage title="Flyers" /> },
-      { path: 'plaquette', element: <PlaceholderPage title="Plaquettes" /> },
-      { path: 'stickers', element: <PlaceholderPage title="Stickers" /> },
-      { path: 'etiquettes', element: <PlaceholderPage title="Étiquettes" /> },
+  { path: 'cartedevistite', element: <CarteVisitePage /> },
+  { path: 'carteinvitation', element: <CarteInvitationPage /> },
+  { path: 'carteremerciment', element: <CarteRemerciementPage /> },
+  { path: 'flyers', element: <FlyersPage /> },
+  { path: 'plaquette', element: <PlaquettePage /> },
+  { path: 'stickers', element: <StickersPage /> },
+  { path: 'etiquettes', element: <EtiquettePage /> },
       { path: 'Mug', element: <PlaceholderPage title="Mug" /> },
       // Footer / pages légales
       { path: 'politique-confidentialite', element: <PlaceholderPage title="Politique de Confidentialité" /> },
