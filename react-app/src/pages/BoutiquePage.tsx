@@ -43,7 +43,7 @@ export default function BoutiquePage() {
       {/* Sections MC / TB / MT en bas sur toute la largeur */}
       {!hasQuery && (
         <div className="mt-8 space-y-8">
-          <StockSection title="CC — Toiles Canvas en stock" items={[1,2,3,4,5,6].map(n => ({src: `/img/CC${n}.jpg`, to: `/boutique/stock/canvas/CC${n}`}))} />
+          <StockSection title="CC — Toiles Canvas en stock" items={[1,2,3,4,5,6].map(n => ({src: `/img/MC${n}.jpg`, to: `/boutique/stock/canvas/MC${n}`}))} />
           <StockSection title="TB — Tableaux Aluminium en stock" items={[1,2,3,4,5,6].map(n => ({src: `/img/TB${n}.jpg`, to: `/boutique/stock/aluminium/TB${n}`}))} />
           <StockSection title="MT — Tableaux Aluminium en stock" items={[1,2,3,4,5,6].map(n => ({src: `/img/MT-${n}.jpg`, to: `/boutique/stock/aluminium/MT-${n}`}))} />
         </div>
