@@ -5,9 +5,13 @@ import './index.css'
 import AppLayout from './shared/AppLayout'
 import HomePage from './pages/HomePage'
 import PlaceholderPage from './pages/PlaceholderPage'
+import PhotoStripsPage from './pages/PhotoStripsPage'
+import PhotoCartePage from './pages/PhotoCartePage'
+import MiniPhotoPage from './pages/MiniPhotoPage'
 import { Navigate } from 'react-router-dom'
 import AboutPage from './pages/AboutPage'
 import AlbumPhotoPage from './pages/AlbumPhotoPage'
+import TableauxAluminiumPage from './pages/TableauxAluminiumPage'
 import PolaroidsPage from './pages/PolaroidsPage'
 
 const router = createBrowserRouter([
@@ -19,12 +23,12 @@ const router = createBrowserRouter([
   { path: 'a-propos', element: <AboutPage /> },
   { path: 'polaroids', element: <PolaroidsPage /> },
   { path: 'polaroidtexte', element: <PolaroidsPage /> },
-      { path: 'miniphoto', element: <PlaceholderPage title="Mini Photo" /> },
-      { path: 'photocarte', element: <PlaceholderPage title="Photo Carte" /> },
-      { path: 'photostrips', element: <PlaceholderPage title="Photo Strips" /> },
-  { path: 'Albumphoto', element: <AlbumPhotoPage /> },
+  { path: 'miniphoto', element: <MiniPhotoPage /> },
+  { path: 'photocarte', element: <PhotoCartePage /> },
+  { path: 'photostrips', element: <PhotoStripsPage /> },
+    { path: 'Albumphoto', element: <AlbumPhotoPage /> },
       { path: 'albumphoto', element: <Navigate to="/Albumphoto" replace /> },
-      { path: 'tableauxpersonnaliser', element: <PlaceholderPage title="Tableaux Aluminium" /> },
+  { path: 'tableauxpersonnaliser', element: <TableauxAluminiumPage /> },
       { path: 'Tableauxebeneprestige', element: <PlaceholderPage title="Tableaux Bois" /> },
       { path: 'canvas', element: <PlaceholderPage title="Canvas" /> },
       { path: 'posters', element: <PlaceholderPage title="Posters papier" /> },
