@@ -5,6 +5,7 @@ import './index.css'
 import AppLayout from './shared/AppLayout'
 import HomePage from './pages/HomePage'
 import PlaceholderPage from './pages/PlaceholderPage'
+import ConfirmationPage from './pages/ConfirmationPage'
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import TermsPage from './pages/TermsPage'
 import MugPage from './pages/MugPage'
@@ -62,7 +63,7 @@ const router = createBrowserRouter([
   // Footer / pages légales
   { path: 'politique-confidentialite', element: <PrivacyPolicyPage /> },
   { path: 'conditions-utilisation', element: <TermsPage /> },
-      { path: 'confirmation', element: <PlaceholderPage title="Confirmation" /> },
+  { path: 'confirmation', element: <ConfirmationPage /> },
       // 404 fallback
       { path: '*', element: <PlaceholderPage title="Page introuvable" description="Cette page n'existe pas encore ou a été déplacée." /> },
     ],
