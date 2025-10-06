@@ -17,21 +17,21 @@ type FormatOption = { code: string; label: string; size: string; price: number }
 const FORMAT_OPTIONS: Record<Kind, FormatOption[]> = {
   // Metal Poster: format unique (exigence métier)
   metal: [
-    { code: 'M32x48', label: 'A3 — 32 × 48 cm', size: '32 × 48 cm', price: 15000 },
+    { code: 'M-A3', label: 'A3 — 29,7 × 42 cm', size: '29,7 × 42 cm', price: 15000 },
   ],
   // Aluminium: aligne sur la page TableauxAluminium (A2/A1/A0)
   aluminium: [
-    { code: 'A4', label: 'A4 — 21 × 30 cm', size: '21 × 30 cm', price: 10000 },
-    { code: 'A3', label: 'A3 — 32 × 48 cm', size: '32 × 48 cm', price: 15000 },
-    { code: 'A2', label: 'A2 — 42 × 60 cm', size: '42 × 60 cm', price: 45000 },
-    { code: 'A1', label: 'A1 — 60 × 85 cm', size: '60 × 85 cm', price: 65000 },
-    { code: 'A0', label: 'A0 — 85 × 119 cm', size: '85 × 119 cm', price: 85000 },
+    { code: 'A4', label: 'A4 — 21 × 29,7 cm', size: '21 × 29,7 cm', price: 10000 },
+    { code: 'A3', label: 'A3 — 29,7 × 42 cm', size: '29,7 × 42 cm', price: 15000 },
+    { code: 'A2', label: 'A2 — 42 × 59,4 cm', size: '42 × 59,4 cm', price: 45000 },
+    { code: 'A1', label: 'A1 — 59,4 × 84,1 cm', size: '59,4 × 84,1 cm', price: 65000 },
+    { code: 'A0', label: 'A0 — 84,1 × 118,9 cm', size: '84,1 × 118,9 cm', price: 85000 },
   ],
   // Canvas: tarifs alignés avec CanvasPage (A2/A1/A0)
   canvas: [
-    { code: 'A2', label: 'A2 — 42 × 60 cm', size: '42 × 60 cm', price: 50000 },
-    { code: 'A1', label: 'A1 — 60 × 85 cm', size: '60 × 85 cm', price: 80000 },
-    { code: 'A0', label: 'A0 — 85 × 119 cm', size: '85 × 119 cm', price: 100000 },
+    { code: 'A2', label: 'A2 — 42 × 59,4 cm', size: '42 × 59,4 cm', price: 50000 },
+    { code: 'A1', label: 'A1 — 59,4 × 84,1 cm', size: '59,4 × 84,1 cm', price: 80000 },
+    { code: 'A0', label: 'A0 — 84,1 × 118,9 cm', size: '84,1 × 118,9 cm', price: 100000 },
   ],
   // Bois (non utilisé dans la boutique stock actuelle, conservé pour compatibilité)
   bois: [
@@ -55,17 +55,12 @@ export default function StockProductPage() {
   // Sélection de format selon catégorie + id (TB => défaut A2, MT => défaut A1)
   const formatOptions = FORMAT_OPTIONS[k] || []
   const defaultFormatCode = useMemo(() => {
-    const ref = (id || '').toUpperCase()
-    if (k === 'aluminium') {
-      if (ref.startsWith('MT-')) return 'A1'
-      if (ref.startsWith('TB')) return 'A2'
-      return 'A2'
-    } else if (k === 'canvas') {
-      if (ref.startsWith('MT-')) return 'A1'
-      return 'A2'
-    }
-    return formatOptions[0]?.code || ''
-  }, [k, id, formatOptions])
+    // Règles claires:
+    // - metal: format unique A3
+    // - aluminium/canvas: défaut A2 (modifiable par l’utilisateur)
+    if (k === 'metal') return formatOptions[0]?.code || ''
+    return (formatOptions.find(f => f.code === 'A2')?.code) || formatOptions[0]?.code || ''
+  }, [k, formatOptions])
   const [formatCode, setFormatCode] = useState<string>(defaultFormatCode)
   const selectedFormat = useMemo(() => formatOptions.find(f => f.code === formatCode) || formatOptions[0], [formatCode, formatOptions])
 
