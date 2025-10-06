@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { PRODUCTS, CATEGORIES, type Product } from '../shared/catalog'
 
@@ -101,17 +101,68 @@ function ProductCard({ product }: { product: Product }) {
 }
 
 function StockSection({ title, items }: { title: string; items: { src: string; to: string }[] }) {
+  const [show, setShow] = useState(false)
+  const [index, setIndex] = useState(0)
+  const openAt = useCallback((i: number) => { setIndex(i); setShow(true) }, [])
+  const close = useCallback(() => setShow(false), [])
+  const next = useCallback(() => setIndex((i) => (i + 1) % items.length), [items.length])
+  const prev = useCallback(() => setIndex((i) => (i - 1 + items.length) % items.length), [items.length])
+
   return (
     <div>
-      <div className="mb-2 text-base font-semibold text-slate-800">{title}</div>
+      <div className="mb-2 flex items-center justify-between">
+        <div className="text-base font-semibold text-slate-800">{title}</div>
+        <button type="button" onClick={() => openAt(0)} className="text-xs rounded-full border border-slate-300 px-3 py-1 hover:bg-slate-50">Voir le diaporama</button>
+      </div>
       <div className="grid gap-3 grid-cols-3">
-        {items.slice(0, 6).map((it) => (
-          <Link key={it.to} to={it.to} className="block overflow-hidden rounded-lg border border-slate-200 hover:shadow-sm">
+        {items.slice(0, 6).map((it, i) => (
+          <Link key={it.to} to={it.to} className="block overflow-hidden rounded-lg border border-slate-200 hover:shadow-sm" onMouseDown={(e) => { if (e.metaKey || e.ctrlKey) return; }} onClick={(e) => { if (e.metaKey || e.ctrlKey) return; e.preventDefault(); openAt(i) }}>
             <div className="relative w-full" style={{ paddingTop: '100%' }}>
               <img src={it.src} alt={title} className="absolute inset-0 h-full w-full object-cover" />
             </div>
           </Link>
         ))}
+      </div>
+      {show && (
+        <SlideshowModal title={title} items={items} index={index} onClose={close} onNext={next} onPrev={prev} />
+      )}
+    </div>
+  )
+}
+
+function SlideshowModal({ title, items, index, onClose, onNext, onPrev }: { title: string; items: { src: string; to: string }[]; index: number; onClose: () => void; onNext: () => void; onPrev: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+      if (e.key === 'ArrowRight') onNext()
+      if (e.key === 'ArrowLeft') onPrev()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose, onNext, onPrev])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-4xl rounded-xl bg-white p-3 shadow-xl">
+        <div className="mb-2 flex items-center justify-between">
+          <div className="text-sm font-medium text-slate-800">{title}</div>
+          <button type="button" onClick={onClose} className="rounded-full border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50">Fermer</button>
+        </div>
+        <div className="relative">
+          <button type="button" onClick={onPrev} className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 px-3 py-1.5 text-sm shadow hover:bg-white">‹</button>
+          <div className="mx-auto max-w-[720px]">
+            <div className="relative w-full" style={{ paddingTop: '100%' }}>
+              <img key={items[index]?.src || index} src={items[index]?.src} alt={title} className="absolute inset-0 h-full w-full object-cover rounded-lg border border-slate-200" />
+            </div>
+          </div>
+          <button type="button" onClick={onNext} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/90 px-3 py-1.5 text-sm shadow hover:bg-white">›</button>
+        </div>
+        <div className="mt-3 flex items-center justify-center gap-1">
+          {items.map((_, i) => (
+            <span key={i} className={`h-1.5 w-1.5 rounded-full ${i === index ? 'bg-slate-900' : 'bg-slate-300'}`} />
+          ))}
+        </div>
       </div>
     </div>
   )
