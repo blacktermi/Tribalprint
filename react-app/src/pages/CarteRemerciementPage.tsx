@@ -47,12 +47,6 @@ export default function CarteRemerciementPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Cartes de remerciement</h1>
           <p className="mt-1 text-slate-600 text-sm">100 cartes: 15 000 FCFA. Format: 10 × 10 cm. Impression recto ou recto-verso. Pelliculage mat ou brillant. Option bords arrondis: +3 000 FCFA par pack de 100.</p>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="text-sm font-medium">Impression</div>
-              {(['recto','recto-verso'] as const).map(m => (
-                <button key={m} type="button" onClick={() => setImpression(m)} className={`rounded-full border px-3 py-1.5 text-sm ${impression === m ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:border-slate-400'}`}>{m === 'recto' ? 'Recto simple' : 'Recto-verso'}</button>
-              ))}
-            </div>
 
           <div className="mt-6 space-y-6">
             <div className="grid gap-4 md:grid-cols-3">
@@ -80,6 +74,13 @@ export default function CarteRemerciementPage() {
               <div className="text-sm font-medium">Pelliculage</div>
               {(['mat','brillant'] as const).map(p => (
                 <button key={p} type="button" onClick={() => setPelliculage(p)} className={`rounded-full border px-3 py-1.5 text-sm ${pelliculage === p ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:border-slate-400'}`}>{p.charAt(0).toUpperCase()+p.slice(1)}</button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="text-sm font-medium">Impression</div>
+              {(['recto','recto-verso'] as const).map(m => (
+                <button key={m} type="button" onClick={() => setImpression(m)} className={`rounded-full border px-3 py-1.5 text-sm ${impression === m ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:border-slate-400'}`}>{m === 'recto' ? 'Recto simple' : 'Recto-verso'}</button>
               ))}
             </div>
 

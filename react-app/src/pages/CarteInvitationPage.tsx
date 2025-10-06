@@ -17,8 +17,9 @@ export default function CarteInvitationPage() {
   const [commune, setCommune] = useState(COMMUNES[1][0])
   const touched = true
 
-  const UNIT_PACK_PRICES: Record<Impression, number> = { 'recto': 20000, 'recto-verso': 20000 }
-  const unitPackPrice = UNIT_PACK_PRICES[impression]
+  // Prix différents par format
+  const BASE_BY_FORMAT: Record<'24x14'|'14x10', number> = { '24x14': 20000, '14x10': 18000 }
+  const unitPackPrice = BASE_BY_FORMAT[format]
   const arrondiOptionPerPack = 3000
   const delivery = useMemo(() => DELIVERY[zone], [zone])
   const subtotalPacks = unitPackPrice * packs
@@ -47,13 +48,8 @@ export default function CarteInvitationPage() {
         </div>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Cartes d'invitation</h1>
-          <p className="mt-1 text-slate-600 text-sm">100 cartes: 20 000 FCFA. Formats: 24 × 14 cm ou 14 × 10 cm. Impression recto ou recto-verso. Pelliculage mat ou brillant. Option bords arrondis: +3 000 FCFA par pack de 100.</p>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="text-sm font-medium">Impression</div>
-              {(['recto','recto-verso'] as const).map(m => (
-                <button key={m} type="button" onClick={() => setImpression(m)} className={`rounded-full border px-3 py-1.5 text-sm ${impression === m ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:border-slate-400'}`}>{m === 'recto' ? 'Recto simple' : 'Recto-verso'}</button>
-              ))}
-            </div>
+          <p className="mt-1 text-slate-600 text-sm">100 cartes: 20 000 FCFA (24×14) • 18 000 FCFA (14×10). Impression recto ou recto-verso. Pelliculage mat ou brillant. Option bords arrondis: +3 000 FCFA par pack de 100.</p>
+            
 
           <div className="mt-6 space-y-6">
             <div className="grid gap-4 md:grid-cols-3">
@@ -88,6 +84,13 @@ export default function CarteInvitationPage() {
               <div className="text-sm font-medium">Pelliculage</div>
               {(['mat','brillant'] as const).map(p => (
                 <button key={p} type="button" onClick={() => setPelliculage(p)} className={`rounded-full border px-3 py-1.5 text-sm ${pelliculage === p ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:border-slate-400'}`}>{p.charAt(0).toUpperCase()+p.slice(1)}</button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="text-sm font-medium">Impression</div>
+              {(['recto','recto-verso'] as const).map(m => (
+                <button key={m} type="button" onClick={() => setImpression(m)} className={`rounded-full border px-3 py-1.5 text-sm ${impression === m ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:border-slate-400'}`}>{m === 'recto' ? 'Recto simple' : 'Recto-verso'}</button>
               ))}
             </div>
 
