@@ -5,6 +5,7 @@ import './index.css'
 import AppLayout from './shared/AppLayout'
 import HomePage from './pages/HomePage'
 import PlaceholderPage from './pages/PlaceholderPage'
+import MugPage from './pages/MugPage'
 import PhotoStripsPage from './pages/PhotoStripsPage'
 import PhotoCartePage from './pages/PhotoCartePage'
 import MiniPhotoPage from './pages/MiniPhotoPage'
@@ -55,7 +56,7 @@ const router = createBrowserRouter([
   { path: 'plaquette', element: <PlaquettePage /> },
   { path: 'stickers', element: <StickersPage /> },
   { path: 'etiquettes', element: <EtiquettePage /> },
-      { path: 'Mug', element: <PlaceholderPage title="Mug" /> },
+  { path: 'Mug', element: <MugPage /> },
       // Footer / pages légales
       { path: 'politique-confidentialite', element: <PlaceholderPage title="Politique de Confidentialité" /> },
       { path: 'conditions-utilisation', element: <PlaceholderPage title="Conditions Générales" /> },
