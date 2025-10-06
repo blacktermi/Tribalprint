@@ -45,7 +45,6 @@ export default function AppLayout() {
               </NavLink>
               <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 transition-opacity duration-150 absolute left-0 top-full mt-2 w-56 rounded-md border border-slate-200 bg-white/95 backdrop-blur shadow-lg p-2 z-30">
                 <NavLink to="/polaroids" className="block rounded px-3 py-2 hover:bg-slate-100">Polaroïds</NavLink>
-                <NavLink to="/polaroidtexte" className="block rounded px-3 py-2 hover:bg-slate-100">Polaroïds texte</NavLink>
                 <NavLink to="/miniphoto" className="block rounded px-3 py-2 hover:bg-slate-100">Mini Photo</NavLink>
                 <NavLink to="/photocarte" className="block rounded px-3 py-2 hover:bg-slate-100">Photo Carte</NavLink>
                 <NavLink to="/photostrips" className="block rounded px-3 py-2 hover:bg-slate-100">Photo Strips</NavLink>
