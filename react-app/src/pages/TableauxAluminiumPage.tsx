@@ -12,8 +12,6 @@ type Shape = 'rect' | 'square'
 
 // Tarifs par format
 const FORMATS = [
-  { code: 'A4', group: 'Petit format', label: 'Format A4 (21 × 30 cm)', price: 10000, widthCm: 21, heightCm: 30 },
-  { code: 'A3', group: 'Moyen format', label: 'Format A3 (32 × 48 cm)', price: 15000, widthCm: 32, heightCm: 48 },
   { code: 'A2', group: 'Moyen format', label: 'Format A2 (42 × 60 cm)', price: 45000, widthCm: 42, heightCm: 60 },
   { code: 'A1', group: 'Grand format', label: 'Format A1 (60 × 85 cm)', price: 65000, widthCm: 60, heightCm: 85 },
   { code: 'A0', group: 'Grand format', label: 'Format A0 (85 × 119 cm)', price: 85000, widthCm: 85, heightCm: 119 },

@@ -5,7 +5,7 @@ import { computeNextDelivery } from '../shared/delivery'
 type Zone = 1 | 2 | 3
 
 const FORMATS = [
-  { code: 'M32x48', group: 'Format unique', label: 'Format 32 × 48 cm', price: 15000, widthCm: 32, heightCm: 48 },
+  { code: 'M32x48', group: 'Format unique', label: 'Format A3 (32 × 48 cm)', price: 15000, widthCm: 32, heightCm: 48 },
 ] as const
 
 const DELIVERY: Record<Zone, number> = { 1: 1500, 2: 2000, 3: 3000 }
@@ -80,7 +80,7 @@ export default function MetalPosterPage() {
         </div>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Metal Poster</h1>
-          <p className="mt-1 text-slate-600 text-sm">15 000 FCFA seulement 🎉 • ✅ Format unique (32 × 48 cm) • Pas de format personnalisé. Remise 10% dès 5 posters métal, acompte 30% si total &gt; 20 000 FCFA.</p>
+          <p className="mt-1 text-slate-600 text-sm">15 000 FCFA seulement 🎉 • ✅ Format unique A3 (32 × 48 cm) • Pas de format personnalisé. Remise 10% dès 5 posters métal, acompte 30% si total &gt; 20 000 FCFA.</p>
 
           <div className="mt-6 space-y-6">
             <div className="grid gap-4 md:grid-cols-3">
