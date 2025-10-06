@@ -43,7 +43,7 @@ export default function BoutiquePage() {
       {/* Sections MC / TB / MT en bas sur toute la largeur */}
       {!hasQuery && (
         <div className="mt-8 space-y-8">
-          <StockSection title="MC — Metal Posters en stock" items={[1,2,3,4,5,6].map(n => ({src: `/img/MC${n}.jpg`, to: `/boutique/stock/metal/MC${n}`}))} />
+          <StockSection title="CC — Toiles Canvas en stock" items={[1,2,3,4,5,6].map(n => ({src: `/img/CC${n}.jpg`, to: `/boutique/stock/canvas/CC${n}`}))} />
           <StockSection title="TB — Tableaux Aluminium en stock" items={[1,2,3,4,5,6].map(n => ({src: `/img/TB${n}.jpg`, to: `/boutique/stock/aluminium/TB${n}`}))} />
           <StockSection title="MT — Tableaux Aluminium en stock" items={[1,2,3,4,5,6].map(n => ({src: `/img/MT-${n}.jpg`, to: `/boutique/stock/aluminium/MT-${n}`}))} />
         </div>
@@ -90,8 +90,8 @@ export default function BoutiquePage() {
 function ProductCard({ product }: { product: Product }) {
   return (
     <Link to={product.path} className="group overflow-hidden rounded-xl border border-slate-200 hover:shadow-sm transition">
-      <div className="aspect-[16/10] w-full overflow-hidden bg-slate-100">
-        <img src={product.cover} alt={product.name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+      <div className="w-full overflow-hidden bg-slate-100 relative" style={{ paddingTop: '100%' }}>
+        <img src={product.cover} alt={product.name} className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
       </div>
       <div className="p-3">
         <div className="font-medium">{product.name}</div>
@@ -104,10 +104,12 @@ function StockSection({ title, items }: { title: string; items: { src: string; t
   return (
     <div>
       <div className="mb-2 text-base font-semibold text-slate-800">{title}</div>
-      <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-        {items.map((it) => (
+      <div className="grid gap-3 grid-cols-3">
+        {items.slice(0, 6).map((it) => (
           <Link key={it.to} to={it.to} className="block overflow-hidden rounded-lg border border-slate-200 hover:shadow-sm">
-            <img src={it.src} alt={title} className="aspect-[3/4] w-full object-cover" />
+            <div className="relative w-full" style={{ paddingTop: '100%' }}>
+              <img src={it.src} alt={title} className="absolute inset-0 h-full w-full object-cover" />
+            </div>
           </Link>
         ))}
       </div>

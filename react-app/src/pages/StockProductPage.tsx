@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { computeNextDelivery } from '../shared/delivery'
 
 type Zone = 1 | 2 | 3
-type Kind = 'metal' | 'bois' | 'aluminium'
+type Kind = 'metal' | 'bois' | 'aluminium' | 'canvas'
 
 const DELIVERY: Record<Zone, number> = { 1: 1500, 2: 2000, 3: 3000 }
 const COMMUNES: Record<Zone, string[]> = {
@@ -12,11 +12,31 @@ const COMMUNES: Record<Zone, string[]> = {
   3: ['Anyama', 'Bassam', 'Williamsville', 'Bingerville'],
 }
 
-// Prix & formats par type de tableau stock
-const PRICING: Record<Kind, { label: string; price: number; size: string }> = {
-  metal: { label: 'Metal Poster 32×48 cm', price: 15000, size: '32 × 48 cm' },
-  aluminium: { label: 'Tableau Aluminium A2', price: 38000, size: '42 × 60 cm' },
-  bois: { label: 'Tableau Bois L', price: 70000, size: '47 × 63 cm' },
+// Formats par catégorie
+type FormatOption = { code: string; label: string; size: string; price: number }
+const FORMAT_OPTIONS: Record<Kind, FormatOption[]> = {
+  // Metal Poster: format unique (exigence métier)
+  metal: [
+    { code: 'M32x48', label: '32 × 48 cm', size: '32 × 48 cm', price: 15000 },
+  ],
+  // Aluminium: aligne sur la page TableauxAluminium (A2/A1/A0)
+  aluminium: [
+    { code: 'A2', label: 'A2 — 42 × 60 cm', size: '42 × 60 cm', price: 45000 },
+    { code: 'A1', label: 'A1 — 60 × 85 cm', size: '60 × 85 cm', price: 65000 },
+    { code: 'A0', label: 'A0 — 85 × 119 cm', size: '85 × 119 cm', price: 85000 },
+  ],
+  // Canvas: tarifs alignés avec CanvasPage (A2/A1/A0)
+  canvas: [
+    { code: 'A2', label: 'A2 — 42 × 60 cm', size: '42 × 60 cm', price: 50000 },
+    { code: 'A1', label: 'A1 — 60 × 85 cm', size: '60 × 85 cm', price: 80000 },
+    { code: 'A0', label: 'A0 — 85 × 119 cm', size: '85 × 119 cm', price: 100000 },
+  ],
+  // Bois (non utilisé dans la boutique stock actuelle, conservé pour compatibilité)
+  bois: [
+    { code: 'L', label: 'L — 47 × 63 cm', size: '47 × 63 cm', price: 70000 },
+    { code: 'XL', label: 'XL — 63 × 90 cm', size: '63 × 90 cm', price: 95000 },
+    { code: 'XXL', label: 'XXL — 85 × 119 cm', size: '85 × 119 cm', price: 130000 },
+  ],
 }
 
 export default function StockProductPage() {
@@ -30,8 +50,25 @@ export default function StockProductPage() {
   const [qty, setQty] = useState(1)
   const touched = true
 
+  // Sélection de format selon catégorie + id (TB => défaut A2, MT => défaut A1)
+  const formatOptions = FORMAT_OPTIONS[k] || []
+  const defaultFormatCode = useMemo(() => {
+    const ref = (id || '').toUpperCase()
+    if (k === 'aluminium') {
+      if (ref.startsWith('MT-')) return 'A1'
+      if (ref.startsWith('TB')) return 'A2'
+      return 'A2'
+    } else if (k === 'canvas') {
+      if (ref.startsWith('MT-')) return 'A1'
+      return 'A2'
+    }
+    return formatOptions[0]?.code || ''
+  }, [k, id, formatOptions])
+  const [formatCode, setFormatCode] = useState<string>(defaultFormatCode)
+  const selectedFormat = useMemo(() => formatOptions.find(f => f.code === formatCode) || formatOptions[0], [formatCode, formatOptions])
+
   const delivery = useMemo(() => DELIVERY[zone], [zone])
-  const price = PRICING[k]?.price || 0
+  const price = selectedFormat?.price || 0
   const subtotal = price * qty
   const eligibleDiscount = qty >= 5
   const discountAmount = eligibleDiscount ? Math.round(subtotal * 0.10) : 0
@@ -41,14 +78,14 @@ export default function StockProductPage() {
   const phoneValid = useMemo(() => { const digits = phone.replace(/\D/g, ''); return digits.length >= 8 && digits.length <= 15 }, [phone])
   const formValid = useMemo(() => fullName.trim().length > 1 && phoneValid && qty > 0, [fullName, phoneValid, qty])
   const updateZone = (z: Zone) => { setZone(z); setCommune(COMMUNES[z][0]) }
-  const label = PRICING[k]?.label || 'Produit en stock'
-  const size = PRICING[k]?.size || ''
+  const label = k === 'metal' ? 'Metal Poster' : (k === 'aluminium' ? 'Tableau Aluminium' : (k === 'canvas' ? 'Toile Canvas' : 'Tableau Bois'))
+  const size = selectedFormat?.size || ''
 
   const confirmationTo = useMemo(() => {
-    const params = new URLSearchParams({ product: `stock-${k}`, ref: id || '', zone: String(zone), commune, subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), name: fullName.trim(), phone: phone.trim(), delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
+    const params = new URLSearchParams({ product: `stock-${k}`, ref: id || '', format: selectedFormat?.code || '', zone: String(zone), commune, subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), name: fullName.trim(), phone: phone.trim(), delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
     params.append('qty', String(qty))
     return `/confirmation?${params.toString()}`
-  }, [k, id, zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, deliveryInfo.iso, deliveryInfo.window, qty])
+  }, [k, id, formatCode, selectedFormat?.code, zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, deliveryInfo.iso, deliveryInfo.window, qty])
 
   const handleOrder = () => { if (!formValid) return; navigate(confirmationTo) }
 
@@ -66,6 +103,19 @@ export default function StockProductPage() {
           <h1 className="text-2xl font-semibold tracking-tight">{label}</h1>
           <p className="mt-1 text-slate-600 text-sm">Référence: {id} • Taille: {size}. Produit en stock. Remise 10% dès 5 unités, acompte 30% au-delà de 20 000 FCFA.</p>
           <div className="mt-6 space-y-6">
+            {/* Format (si plusieurs options) */}
+            {formatOptions.length > 1 && (
+              <div>
+                <div className="text-sm font-medium mb-2">Format</div>
+                <div className="flex flex-wrap gap-2">
+                  {formatOptions.map(opt => (
+                    <button key={opt.code} type="button" onClick={() => setFormatCode(opt.code)} className={`rounded-full border px-3 py-1.5 text-sm ${formatCode === opt.code ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:border-slate-400'}`}>
+                      {opt.label} — {opt.price.toLocaleString()} FCFA
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="grid gap-4 md:grid-cols-3">
               <div className="md:col-span-2">
                 <label className="text-sm font-medium">Nom et Prénom <span className="text-red-600">*</span></label>
@@ -110,7 +160,7 @@ export default function StockProductPage() {
             <div className="rounded-xl border border-slate-200 p-4 text-sm">
               <div className="mb-2">
                 <div className="font-medium mb-1">Produit</div>
-                <div className="flex justify-between text-slate-700"><span>{label} (Ref {id}) × {qty}</span><span>{subtotal.toLocaleString()} FCFA</span></div>
+                <div className="flex justify-between text-slate-700"><span>{label} {selectedFormat ? `(${selectedFormat.label})` : ''} — Ref {id} × {qty}</span><span>{subtotal.toLocaleString()} FCFA</span></div>
               </div>
               {discountAmount > 0 && (<div className="flex justify-between text-green-700"><span>Remise (10% dès 5 unités)</span><span>-{discountAmount.toLocaleString()} FCFA</span></div>)}
               <div className="flex justify-between"><span>Livraison (zone {zone})</span><span>{delivery.toLocaleString()} FCFA</span></div>
