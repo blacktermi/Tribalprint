@@ -81,6 +81,11 @@ export default function TableauxAluminiumPage() {
 
   // Formats personnalisés
   const [customItems, setCustomItems] = useState<CustomFormatItem[]>([])
+  // Sélection/ajout formats standards
+  const selectedStandard = useMemo(() => FORMATS.filter(f => (quantities[f.code] || 0) > 0), [quantities])
+  const availableStandard = useMemo(() => FORMATS.filter(f => (quantities[f.code] || 0) === 0), [quantities])
+  const [formatToAdd, setFormatToAdd] = useState<(typeof FORMATS)[number]['code'] | ''>('')
+  const [qtyToAdd, setQtyToAdd] = useState<number>(1)
 
   const [touched, setTouched] = useState(false)
 
@@ -144,6 +149,19 @@ export default function TableauxAluminiumPage() {
 
   const setShape = (code: (typeof FORMATS)[number]['code'], shape: Shape) => {
     setShapesByFormat(prev => ({ ...prev, [code]: shape }))
+  }
+
+  const removeStandardFormat = (code: (typeof FORMATS)[number]['code']) => {
+    setQuantities(prev => ({ ...prev, [code]: 0 }))
+    setPhotosByFormat(prev => ({ ...prev, [code]: [] }))
+  }
+
+  const addStandardFormat = () => {
+    const code = formatToAdd
+    if (!code) return
+    setQuantities(prev => ({ ...prev, [code]: Math.max(1, Math.min(50, qtyToAdd || 1)) }))
+    setFormatToAdd('')
+    setQtyToAdd(1)
   }
 
   // Custom formats handlers
@@ -291,68 +309,86 @@ export default function TableauxAluminiumPage() {
               </div>
             </div>
 
-            {/* Sélection multi-formats */}
-            {groups.map((g) => (
-              <div key={g}>
-                <div className="text-sm font-semibold mb-2">{g}</div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {formatsByGroup(g).map((f) => {
-                    const qty = quantities[f.code] || 0
-                    const imgs = photosByFormat[f.code]?.length || 0
-                    return (
-                      <div key={f.code} className={`rounded-lg border ${qty > 0 ? 'border-slate-900' : 'border-slate-200'} p-3`}>
-                        <div className="flex items-center justify-between gap-2">
-                          <div>
-                            <div className="font-medium">{f.label}</div>
-                            <div className="text-slate-600 text-sm">{f.price.toLocaleString()} FCFA</div>
-                            <div className="mt-1 flex flex-wrap gap-2 text-xs">
-                              <span className="text-slate-700">Version:</span>
-                              <button type="button" onClick={() => setShape(f.code, 'rect')} className={`rounded-full border px-2 py-0.5 ${shapesByFormat[f.code] === 'rect' ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:border-slate-400'}`}>Rectangulaire</button>
-                              <button type="button" onClick={() => setShape(f.code, 'square')} className={`rounded-full border px-2 py-0.5 ${shapesByFormat[f.code] === 'square' ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:border-slate-400'}`}>Carré</button>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <label className="text-xs text-slate-600">Qté</label>
-                            <select className="rounded-md border border-slate-300 px-2 py-1 text-sm" value={qty} onChange={(e) => setQty(f.code, parseInt(e.target.value) || 0)}>
-                              {Array.from({ length: 11 }, (_, i) => i).map(n => (<option key={n} value={n}>{n}</option>))}
-                            </select>
-                          </div>
-                        </div>
-
-                        {/* Upload photos pour ce format */}
-                        <div className="mt-3 rounded-lg border border-dashed border-slate-300 p-3">
-                          <label className="flex cursor-pointer items-center justify-between gap-4">
-                            <div className="text-xs text-slate-600">
-                              Déposez vos images ici ou <span className="font-medium text-slate-900">cliquez pour sélectionner</span>
-                              <div className="text-[11px] text-slate-500">Formats acceptés: JPG, PNG, HEIC • Minimum {qty} photo(s)</div>
-                            </div>
-                            <input type="file" accept="image/*" multiple onChange={onFilesSelected(f.code)} className="hidden" />
-                            <span className="rounded-full bg-slate-900 px-3 py-1.5 text-[11px] font-medium text-white">Ajouter</span>
-                          </label>
-                          {touched && qty > 0 && imgs < qty && (
-                            <div className="mt-1 text-[11px] text-red-600">Veuillez ajouter au moins {qty} photo(s) pour ce format (actuellement {imgs}).</div>
-                          )}
-                          {/* Aperçu */}
-                          {imgs > 0 && (
-                            <div className="mt-3 grid grid-cols-4 gap-1">
-                              {photosByFormat[f.code]!.map((file, idx) => {
-                                const url = URL.createObjectURL(file)
-                                return (
-                                  <div key={idx} className="relative overflow-hidden rounded border border-slate-200">
-                                    <img src={url} alt={file.name} className="h-16 w-full object-cover" onLoad={() => URL.revokeObjectURL(url)} />
-                                    <button type="button" onClick={() => removePhoto(f.code, idx)} className="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-white">Retirer</button>
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
+            {/* Formats standards sélectionnés uniquement */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-semibold">Formats standards sélectionnés</div>
+                <div className="flex items-center gap-2">
+                  <select
+                    className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+                    value={formatToAdd}
+                    onChange={(e) => setFormatToAdd(e.target.value as any)}
+                  >
+                    <option value="">Ajouter un format…</option>
+                    {availableStandard.map(f => (
+                      <option key={f.code} value={f.code}>{f.label} — {f.price.toLocaleString()} FCFA</option>
+                    ))}
+                  </select>
+                  <input type="number" min={1} max={50} value={qtyToAdd} onChange={(e) => setQtyToAdd(Math.max(1, Math.min(50, Number(e.target.value) || 1)))} className="w-20 rounded-md border border-slate-300 px-2 py-1 text-sm" />
+                  <button type="button" onClick={addStandardFormat} disabled={!formatToAdd} className={`rounded-full px-3 py-1.5 text-xs font-medium ${formatToAdd ? 'bg-slate-900 text-white' : 'bg-slate-300 text-slate-600 cursor-not-allowed'}`}>Ajouter</button>
                 </div>
               </div>
-            ))}
+              {selectedStandard.length === 0 && (
+                <div className="text-xs text-slate-600">Aucun format standard sélectionné. Utilisez « Ajouter un format… » pour commencer.</div>
+              )}
+              <div className="grid gap-3 sm:grid-cols-2">
+                {selectedStandard.map((f) => {
+                  const qty = quantities[f.code] || 0
+                  const imgs = photosByFormat[f.code]?.length || 0
+                  return (
+                    <div key={f.code} className={`rounded-lg border ${qty > 0 ? 'border-slate-900' : 'border-slate-200'} p-3`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="font-medium">{f.label}</div>
+                          <div className="text-slate-600 text-sm">{f.price.toLocaleString()} FCFA</div>
+                          <div className="mt-1 flex flex-wrap gap-2 text-xs">
+                            <span className="text-slate-700">Version:</span>
+                            <button type="button" onClick={() => setShape(f.code, 'rect')} className={`rounded-full border px-2 py-0.5 ${shapesByFormat[f.code] === 'rect' ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:border-slate-400'}`}>Rectangulaire</button>
+                            <button type="button" onClick={() => setShape(f.code, 'square')} className={`rounded-full border px-2 py-0.5 ${shapesByFormat[f.code] === 'square' ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:border-slate-400'}`}>Carré</button>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs text-slate-600">Qté</label>
+                          <select className="rounded-md border border-slate-300 px-2 py-1 text-sm" value={qty} onChange={(e) => setQty(f.code, parseInt(e.target.value) || 0)}>
+                            {Array.from({ length: 51 }, (_, i) => i).map(n => (<option key={n} value={n}>{n}</option>))}
+                          </select>
+                        </div>
+                      </div>
+                      {/* Upload photos pour ce format */}
+                      <div className="mt-3 rounded-lg border border-dashed border-slate-300 p-3">
+                        <label className="flex cursor-pointer items-center justify-between gap-4">
+                          <div className="text-xs text-slate-600">
+                            Déposez vos images ici ou <span className="font-medium text-slate-900">cliquez pour sélectionner</span>
+                            <div className="text-[11px] text-slate-500">Formats acceptés: JPG, PNG, HEIC • Minimum {qty} photo(s)</div>
+                          </div>
+                          <input type="file" accept="image/*" multiple onChange={onFilesSelected(f.code)} className="hidden" />
+                          <span className="rounded-full bg-slate-900 px-3 py-1.5 text-[11px] font-medium text-white">Ajouter</span>
+                        </label>
+                        {touched && qty > 0 && imgs < qty && (
+                          <div className="mt-1 text-[11px] text-red-600">Veuillez ajouter au moins {qty} photo(s) pour ce format (actuellement {imgs}).</div>
+                        )}
+                        {imgs > 0 && (
+                          <div className="mt-3 grid grid-cols-4 gap-1">
+                            {photosByFormat[f.code]!.map((file, idx) => {
+                              const url = URL.createObjectURL(file)
+                              return (
+                                <div key={idx} className="relative overflow-hidden rounded border border-slate-200">
+                                  <img src={url} alt={file.name} className="h-16 w-full object-cover" onLoad={() => URL.revokeObjectURL(url)} />
+                                  <button type="button" onClick={() => removePhoto(f.code, idx)} className="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] text-white">Retirer</button>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-3 flex justify-end">
+                        <button type="button" onClick={() => removeStandardFormat(f.code)} className="text-xs text-red-600 hover:underline">Supprimer ce format</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
 
             {/* Livraison */}
             <div>
@@ -443,6 +479,37 @@ export default function TableauxAluminiumPage() {
 
             {/* Récap */}
             <div className="rounded-xl border border-slate-200 p-4 text-sm">
+              {/* Détail formats sélectionnés */}
+              {(selectedStandard.length > 0 || customItems.length > 0) && (
+                <div className="mb-2">
+                  <div className="font-medium mb-1">Formats sélectionnés</div>
+                  <div className="space-y-1 text-slate-700">
+                    {selectedStandard.map(f => {
+                      const qty = quantities[f.code] || 0
+                      const unit = f.price
+                      const shapeLabel = shapesByFormat[f.code] === 'square' ? 'Carré' : 'Rect'
+                      return (
+                        <div key={f.code} className="flex justify-between">
+                          <span>{f.code} ({shapeLabel}) × {qty}</span>
+                          <span>{(unit * qty).toLocaleString()} FCFA</span>
+                        </div>
+                      )
+                    })}
+                    {customItems.map((it, idx) => {
+                      const qty = it.qty || 0
+                      const hasPrice = typeof it.price === 'number'
+                      const unit = hasPrice ? (it.price as number) : 0
+                      const dims = `${it.width || '?'}×${it.height || '?'} cm`
+                      return (
+                        <div key={it.id} className="flex justify-between">
+                          <span>Perso #{idx + 1} ({dims}) × {qty}</span>
+                          <span>{hasPrice ? (unit * qty).toLocaleString() + ' FCFA' : 'devis'}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
               <div className="flex justify-between"><span>Sous-total</span><span>{subtotal.toLocaleString()} FCFA</span></div>
               <div className="flex justify-between"><span>Livraison (zone {zone})</span><span>{delivery.toLocaleString()} FCFA</span></div>
               <div className="flex justify-between text-slate-600"><span>Commune</span><span>{commune}</span></div>
