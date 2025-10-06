@@ -110,7 +110,15 @@ export default function TableauxAluminiumPage() {
   }
   const subtotalCustom = useMemo(() => customItems.reduce((sum, it) => sum + (it.qty || 0) * computeCustomUnitPrice(it.width, it.height), 0), [customItems])
   const subtotal = subtotalStandard + subtotalCustom
-  const total = subtotal + delivery
+  // Remise 10% à partir de 5 tableaux (sur sous-total produits uniquement)
+  const eligibleDiscount = useMemo(() => {
+    const countStd = FORMATS.reduce((n, f) => n + (quantities[f.code] || 0), 0)
+    const countCustom = customItems.reduce((n, it) => n + (it.qty || 0), 0)
+    return (countStd + countCustom) >= 5
+  }, [quantities, customItems])
+  const discountAmount = eligibleDiscount ? Math.round(subtotal * 0.10) : 0
+  const totalAfterDiscount = Math.max(0, subtotal - discountAmount)
+  const total = totalAfterDiscount + delivery
   const totalQty = useMemo(() =>
     FORMATS.reduce((n, f) => n + (quantities[f.code] || 0), 0) + customItems.reduce((n, it) => n + (it.qty || 0), 0)
   , [quantities, customItems])
@@ -221,6 +229,7 @@ export default function TableauxAluminiumPage() {
       zone: String(zone),
       commune,
       subtotal: String(subtotal),
+      discount: String(discountAmount),
       delivery: String(delivery),
       total: String(total),
       name: fullName.trim(),
@@ -246,8 +255,15 @@ export default function TableauxAluminiumPage() {
         params.append(`custom_${idx}_unit_price`, String(unit))
       }
     })
+    // Yango si grand format (A1/A0) ou personnalisé >= surface A1
+    const a1 = FORMATS.find(f => f.code === 'A1')!
+    const areaA1 = a1.widthCm * a1.heightCm
+    const hasLargeStd = ['A1','A0'].some(code => (quantities as any)[code] > 0)
+    const hasLargeCustom = customItems.some(it => typeof it.width === 'number' && typeof it.height === 'number' && (it.width * it.height) >= areaA1 && (it.qty || 0) > 0)
+    const deliveryMethod = (hasLargeStd || hasLargeCustom) ? 'yango' : 'standard'
+    params.append('delivery_method', deliveryMethod)
     return `/confirmation?${params.toString()}`
-  }, [orientation, marieLouise, frameColor, colorMode, zone, commune, subtotal, delivery, total, fullName, phone, quantities, photosByFormat, shapesByFormat, customItems])
+  }, [orientation, marieLouise, frameColor, colorMode, zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, quantities, photosByFormat, shapesByFormat, customItems])
 
   const handleOrder = () => {
     setTouched(true)
@@ -407,25 +423,6 @@ export default function TableauxAluminiumPage() {
               </div>
             </div>
 
-            {/* Livraison */}
-            <div>
-              <div className="text-sm font-medium mb-2">Zone de livraison</div>
-              <div className="grid grid-cols-3 gap-3">
-                {[1, 2, 3].map((z) => (
-                  <button key={z} onClick={() => updateZone(z as Zone)} className={`rounded-lg border px-3 py-2 text-sm text-left ${zone === z ? 'border-slate-900 ring-2 ring-slate-200' : 'border-slate-300 hover:border-slate-400'}`}>
-                    <div className="font-medium">Zone {z}</div>
-                    <div className="text-slate-600">{DELIVERY[z as Zone].toLocaleString()} FCFA</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <div className="text-sm font-medium mb-2">Commune</div>
-              <select className="w-full md:w-80 rounded-md border border-slate-300 px-3 py-2 text-sm" value={commune} onChange={(e) => setCommune(e.target.value)}>
-                {COMMUNES[zone].map((c) => (<option key={c} value={c}>{c}</option>))}
-              </select>
-            </div>
-
             {/* Formats personnalisés */}
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -433,7 +430,7 @@ export default function TableauxAluminiumPage() {
                 <button type="button" onClick={addCustomItem} className="rounded-full border border-slate-300 px-3 py-1.5 text-xs hover:border-slate-400">Ajouter un format</button>
               </div>
               {customItems.length === 0 && (
-                <div className="text-xs text-slate-600">Ajoutez vos propres dimensions (en cm). Le prix unitaire est facultatif (sur devis si vide).</div>
+                <div className="text-xs text-slate-600">Ajoutez vos propres dimensions (en cm). Le prix unitaire est estimé automatiquement selon la surface.</div>
               )}
               <div className="space-y-4 mt-3">
                 {customItems.map((it, idx) => {
@@ -499,6 +496,27 @@ export default function TableauxAluminiumPage() {
               </div>
             </div>
 
+            {/* Livraison */}
+            <div>
+              <div className="text-sm font-medium mb-2">Zone de livraison</div>
+              <div className="grid grid-cols-3 gap-3">
+                {[1, 2, 3].map((z) => (
+                  <button key={z} onClick={() => updateZone(z as Zone)} className={`rounded-lg border px-3 py-2 text-sm text-left ${zone === z ? 'border-slate-900 ring-2 ring-slate-200' : 'border-slate-300 hover:border-slate-400'}`}>
+                    <div className="font-medium">Zone {z}</div>
+                    <div className="text-slate-600">{DELIVERY[z as Zone].toLocaleString()} FCFA</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div className="text-sm font-medium mb-2">Commune</div>
+              <select className="w-full md:w-80 rounded-md border border-slate-300 px-3 py-2 text-sm" value={commune} onChange={(e) => setCommune(e.target.value)}>
+                {COMMUNES[zone].map((c) => (<option key={c} value={c}>{c}</option>))}
+              </select>
+            </div>
+
+            
+
             {/* Récap */}
             <div className="rounded-xl border border-slate-200 p-4 text-sm">
               {/* Détail formats sélectionnés */}
@@ -532,14 +550,32 @@ export default function TableauxAluminiumPage() {
                 </div>
               )}
               <div className="flex justify-between"><span>Sous-total</span><span>{subtotal.toLocaleString()} FCFA</span></div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-green-700"><span>Remise (10% dès 5 tableaux)</span><span>-{discountAmount.toLocaleString()} FCFA</span></div>
+              )}
               <div className="flex justify-between"><span>Livraison (zone {zone})</span><span>{delivery.toLocaleString()} FCFA</span></div>
               <div className="flex justify-between text-slate-600"><span>Commune</span><span>{commune}</span></div>
+              {/* Méthode de livraison (Yango si A1/A0 ou perso ≥ A1) */}
+              {(() => {
+                const a1 = FORMATS.find(f => f.code === 'A1')!
+                const areaA1 = a1.widthCm * a1.heightCm
+                const hasLargeStd = ['A1','A0'].some(code => (quantities as any)[code] > 0)
+                const hasLargeCustom = customItems.some(it => typeof it.width === 'number' && typeof it.height === 'number' && (it.width * it.height) >= areaA1 && (it.qty || 0) > 0)
+                if (hasLargeStd || hasLargeCustom) {
+                  return <div className="flex justify-between text-slate-600"><span>Livraison</span><span>Yango (grands formats)</span></div>
+                }
+                return null
+              })()}
               <div className="flex justify-between text-slate-600"><span>Options</span><span>{orientation === 'portrait' ? 'Portrait' : 'Paysage'} • {marieLouise === 'avec' ? 'Avec marie-louise' : 'Sans marie-louise'} • Cadre {frameColor} • {colorMode === 'couleur' ? 'Couleur' : 'Noir & Blanc'}</span></div>
               {/* Info version carrée sélectionnée */}
               {FORMATS.some(f => (quantities[f.code] || 0) > 0 && shapesByFormat[f.code] === 'square') && (
                 <div className="flex justify-between text-slate-600"><span>Versions carrées</span><span>{FORMATS.filter(f => (quantities[f.code] || 0) > 0 && shapesByFormat[f.code] === 'square').map(f => f.code).join(', ')}</span></div>
               )}
               <div className="mt-2 border-t pt-2 flex justify-between font-semibold text-slate-900"><span>Total</span><span>{total.toLocaleString()} FCFA</span></div>
+              {/* Acompte si total > 20 000 FCFA */}
+              {total > 20000 && (
+                <div className="flex justify-between text-slate-800"><span>Acompte (30%) à régler</span><span>{Math.round(total * 0.30).toLocaleString()} FCFA</span></div>
+              )}
             </div>
 
             {/* CTA */}
