@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { computeNextDelivery, DELIVERY, COMMUNES, type Zone } from '../shared/delivery'
+import UploadBox from '../components/UploadBox'
 
 export default function EtiquettePage() {
   const navigate = useNavigate()
@@ -10,6 +11,8 @@ export default function EtiquettePage() {
   const [qty, setQty] = useState(50)
   const [zone, setZone] = useState<Zone>(1)
   const [commune, setCommune] = useState(COMMUNES[1][0])
+  const [file, setFile] = useState<File | null>(null)
+  const [coverSrc, setCoverSrc] = useState('/img/etiquettes-cover.jpg')
   const touched = true
 
   const unitPrice = 200
@@ -24,9 +27,10 @@ export default function EtiquettePage() {
   const phoneValid = useMemo(() => { const d = phone.replace(/\D/g, ''); return d.length >= 8 && d.length <= 15 }, [phone])
   const formValid = useMemo(() => fullName.trim().length > 1 && phoneValid && qty >= minQty && details.trim().length > 4, [fullName, phoneValid, qty, details])
   const updateZone = (z: Zone) => { setZone(z); setCommune(COMMUNES[z][0]) }
+  // Aperçu géré par UploadBox
 
   const confirmationTo = useMemo(() => {
-    const params = new URLSearchParams({ product: 'etiquette', details: details.trim(), qty: String(qty), unit_price: String(unitPrice), subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), zone: String(zone), commune, name: fullName.trim(), phone: phone.trim(), delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
+  const params = new URLSearchParams({ product: 'etiquette', details: details.trim(), qty: String(qty), unit_price: String(unitPrice), subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), zone: String(zone), commune, name: fullName.trim(), phone: phone.trim(), has_file: String(!!file), file_name: file?.name || '', file_type: file?.type || '', delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
     return `/confirmation?${params.toString()}`
   }, [details, qty, unitPrice, subtotal, discountAmount, delivery, total, zone, commune, fullName, phone, deliveryInfo.iso, deliveryInfo.window])
 
@@ -35,7 +39,7 @@ export default function EtiquettePage() {
       <div className="grid gap-8 md:grid-cols-2">
         <div>
           <div className="overflow-hidden rounded-xl border border-slate-200">
-            <img src="/img/etiquettes-cover.svg" alt="Étiquettes personnalisées" className="w-full object-cover" />
+            <img src={coverSrc} onError={() => setCoverSrc('/img/etiquettes-cover.svg')} alt="Étiquettes personnalisées" className="w-full object-cover" />
           </div>
         </div>
         <div>
@@ -66,6 +70,12 @@ export default function EtiquettePage() {
               <div className="text-sm font-medium">Quantité</div>
               <input type="number" min={minQty} step={10} className="w-28 rounded-md border border-slate-300 px-3 py-2 text-sm" value={qty} onChange={(e) => setQty(Math.max(minQty, parseInt(e.target.value) || minQty))} />
               <div className="text-sm text-slate-600">Min {minQty} ex</div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium mb-2">Fichier (image ou PDF)</div>
+              <UploadBox file={file} onChange={setFile} accept="image/*,application/pdf" hint="Formats acceptés: JPG, PNG, HEIC, PDF • 1 fichier max" />
+              {!file && (<div className="mt-1 text-xs text-slate-500">Vous pourrez aussi l’envoyer après confirmation (WhatsApp/email).</div>)}
             </div>
 
             <div>

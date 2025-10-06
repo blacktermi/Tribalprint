@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { computeNextDelivery, DELIVERY, COMMUNES, type Zone } from '../shared/delivery'
+import UploadBox from '../components/UploadBox'
 
 type Impression = 'recto' | 'recto-verso'
 
@@ -15,6 +16,8 @@ export default function CarteInvitationPage() {
   const [bordsArrondis, setBordsArrondis] = useState(false)
   const [zone, setZone] = useState<Zone>(1)
   const [commune, setCommune] = useState(COMMUNES[1][0])
+  const [file, setFile] = useState<File | null>(null)
+  const [coverSrc, setCoverSrc] = useState('/img/carteinvitation-cover.jpg')
   const touched = true
 
   // Prix différents par format
@@ -33,8 +36,10 @@ export default function CarteInvitationPage() {
   const formValid = useMemo(() => fullName.trim().length > 1 && phoneValid && packs > 0, [fullName, phoneValid, packs])
   const updateZone = (z: Zone) => { setZone(z); setCommune(COMMUNES[z][0]) }
 
+  // Aperçu géré par UploadBox
+
   const confirmationTo = useMemo(() => {
-  const params = new URLSearchParams({ product: 'carte-invitation', packs: String(packs), pack_size: '100', format, impression, pelliculage, bords_arrondis: String(bordsArrondis), zone: String(zone), commune, subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), name: fullName.trim(), phone: phone.trim(), delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
+  const params = new URLSearchParams({ product: 'carte-invitation', packs: String(packs), pack_size: '100', format, impression, pelliculage, bords_arrondis: String(bordsArrondis), zone: String(zone), commune, subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), name: fullName.trim(), phone: phone.trim(), has_file: String(!!file), file_name: file?.name || '', file_type: file?.type || '', delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
     return `/confirmation?${params.toString()}`
   }, [packs, format, pelliculage, bordsArrondis, zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, deliveryInfo.iso, deliveryInfo.window])
 
@@ -43,7 +48,7 @@ export default function CarteInvitationPage() {
       <div className="grid gap-8 md:grid-cols-2">
         <div>
           <div className="overflow-hidden rounded-xl border border-slate-200">
-            <img src="/img/carte-invitation-cover.svg" alt="Cartes d'invitation" className="w-full object-cover" />
+            <img src={coverSrc} onError={() => setCoverSrc('/img/carte-invitation-cover.svg')} alt="Cartes d'invitation" className="w-full object-cover" />
           </div>
         </div>
         <div>
@@ -92,6 +97,12 @@ export default function CarteInvitationPage() {
               {(['recto','recto-verso'] as const).map(m => (
                 <button key={m} type="button" onClick={() => setImpression(m)} className={`rounded-full border px-3 py-1.5 text-sm ${impression === m ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:border-slate-400'}`}>{m === 'recto' ? 'Recto simple' : 'Recto-verso'}</button>
               ))}
+            </div>
+
+            <div>
+              <div className="text-sm font-medium mb-2">Fichier (image ou PDF)</div>
+              <UploadBox file={file} onChange={setFile} accept="image/*,application/pdf" hint="Formats acceptés: JPG, PNG, HEIC, PDF • 1 fichier max" />
+              {!file && (<div className="mt-1 text-xs text-slate-500">Vous pourrez aussi l’envoyer après confirmation (WhatsApp/email).</div>)}
             </div>
 
             <div className="flex items-center gap-3">
