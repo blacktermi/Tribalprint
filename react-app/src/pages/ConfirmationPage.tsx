@@ -16,7 +16,10 @@ function formatFcfa(n?: string | null) {
 }
 
 export default function ConfirmationPage() {
-  const [logoOk, setLogoOk] = useState(true)
+  // Logo Wave: essayer PNG fourni, sinon fallback vers SVG interne, sinon emoji
+  const logoSources = ['/img/Logowave.png', '/img/logowave.png', '/img/wave-logo.svg'] as const
+  const [logoIdx, setLogoIdx] = useState(0)
+  const [emojiFallback, setEmojiFallback] = useState(false)
   const q = useQuery()
   const name = q.get('name') || ''
   const phone = q.get('phone') || ''
@@ -84,8 +87,15 @@ export default function ConfirmationPage() {
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-sm font-medium shadow"
                 title={`Payer l’acompte de ${acompte.toLocaleString()} FCFA`}
               >
-                {logoOk ? (
-                  <img src="/img/wave-logo.svg" alt="Wave" className="h-5 w-5 rounded" onError={() => setLogoOk(false)} />
+                {!emojiFallback ? (
+                  <img
+                    src={logoSources[logoIdx]}
+                    alt="Wave"
+                    className="h-5 w-auto"
+                    onError={() => {
+                      if (logoIdx < logoSources.length - 1) setLogoIdx(i => i + 1); else setEmojiFallback(true)
+                    }}
+                  />
                 ) : (
                   <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-white/15">👋</span>
                 )}
@@ -101,8 +111,15 @@ export default function ConfirmationPage() {
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 text-sm font-medium shadow"
                 title={`Payer le total de ${total.toLocaleString()} FCFA`}
               >
-                {logoOk ? (
-                  <img src="/img/wave-logo.svg" alt="Wave" className="h-5 w-5 rounded" onError={() => setLogoOk(false)} />
+                {!emojiFallback ? (
+                  <img
+                    src={logoSources[logoIdx]}
+                    alt="Wave"
+                    className="h-5 w-auto"
+                    onError={() => {
+                      if (logoIdx < logoSources.length - 1) setLogoIdx(i => i + 1); else setEmojiFallback(true)
+                    }}
+                  />
                 ) : (
                   <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-white/15">👋</span>
                 )}
