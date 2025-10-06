@@ -67,19 +67,13 @@ export default function UploadBox({ file, onChange, accept = 'image/*,applicatio
         tabIndex={0}
       >
         <div className="flex items-center gap-4">
-          <div className="hidden sm:block">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 16V4m0 0l-4 4m4-4l4 4" stroke="#0f172a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              <rect x="3" y="12" width="18" height="8" rx="2" stroke="#334155" strokeWidth="1.5"/>
-            </svg>
-          </div>
           <div className="flex-1">
             <div className="text-sm text-slate-800">
               {effectiveLabel.split(/\scliquer\s/i).length > 1 ? effectiveLabel : effectiveLabel}
             </div>
             <div className="mt-1 text-xs text-slate-500">{effectiveHint}</div>
             <div className="mt-3">
-              <button type="button" className="inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-medium hover:bg-slate-50" onClick={onClick}>Ajouter</button>
+              <button type="button" className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium bg-slate-900 text-white hover:bg-slate-800" onClick={onClick}>Ajouter</button>
               <input ref={inputRef} type="file" className="hidden" accept={accept} multiple={multiple} onChange={(e) => onFiles(e.target.files)} />
             </div>
           </div>
