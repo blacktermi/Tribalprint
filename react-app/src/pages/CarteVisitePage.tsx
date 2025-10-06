@@ -2,18 +2,22 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { computeNextDelivery, DELIVERY, COMMUNES, type Zone } from '../shared/delivery'
 
+type Impression = 'recto' | 'recto-verso'
+
 export default function CarteVisitePage() {
   const navigate = useNavigate()
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [packs, setPacks] = useState(1) // 1 pack = 100 cartes
   const [pelliculage, setPelliculage] = useState<'mat' | 'brillant'>('mat')
+  const [impression, setImpression] = useState<Impression>('recto-verso')
   const [bordsArrondis, setBordsArrondis] = useState(false)
   const [zone, setZone] = useState<Zone>(1)
   const [commune, setCommune] = useState(COMMUNES[1][0])
   const touched = true
 
-  const unitPackPrice = 15000
+  const UNIT_PACK_PRICES: Record<Impression, number> = { 'recto': 15000, 'recto-verso': 15000 }
+  const unitPackPrice = UNIT_PACK_PRICES[impression]
   const arrondiOptionPerPack = 3000
   const delivery = useMemo(() => DELIVERY[zone], [zone])
   const subtotalPacks = unitPackPrice * packs
@@ -28,7 +32,7 @@ export default function CarteVisitePage() {
   const updateZone = (z: Zone) => { setZone(z); setCommune(COMMUNES[z][0]) }
 
   const confirmationTo = useMemo(() => {
-    const params = new URLSearchParams({ product: 'carte-visite', packs: String(packs), pack_size: '100', pelliculage, bords_arrondis: String(bordsArrondis), zone: String(zone), commune, subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), name: fullName.trim(), phone: phone.trim(), delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
+  const params = new URLSearchParams({ product: 'carte-visite', packs: String(packs), pack_size: '100', impression, pelliculage, bords_arrondis: String(bordsArrondis), zone: String(zone), commune, subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), name: fullName.trim(), phone: phone.trim(), delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
     return `/confirmation?${params.toString()}`
   }, [packs, pelliculage, bordsArrondis, zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, deliveryInfo.iso, deliveryInfo.window])
 
@@ -44,7 +48,13 @@ export default function CarteVisitePage() {
         </div>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Cartes de visite</h1>
-          <p className="mt-1 text-slate-600 text-sm">100 cartes recto-verso: 15 000 FCFA. Format 85 × 55 mm. Pelliculage mat ou brillant. Option bords arrondis: +3 000 FCFA par pack de 100.</p>
+          <p className="mt-1 text-slate-600 text-sm">100 cartes recto-verso: 15 000 FCFA. Format 85 × 55 mm. Impression recto ou recto-verso. Pelliculage mat ou brillant. Option bords arrondis: +3 000 FCFA par pack de 100.</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="text-sm font-medium">Impression</div>
+              {(['recto','recto-verso'] as const).map(m => (
+                <button key={m} type="button" onClick={() => setImpression(m)} className={`rounded-full border px-3 py-1.5 text-sm ${impression === m ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:border-slate-400'}`}>{m === 'recto' ? 'Recto simple' : 'Recto-verso'}</button>
+              ))}
+            </div>
 
           <div className="mt-6 space-y-6">
             <div className="grid gap-4 md:grid-cols-3">
