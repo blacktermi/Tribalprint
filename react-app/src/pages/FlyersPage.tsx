@@ -44,7 +44,7 @@ export default function FlyersPage() {
       <div className="grid gap-8 md:grid-cols-2">
         <div>
           <div className="overflow-hidden rounded-xl border border-slate-200">
-            <img src="/img/flyers-cover.jpg" alt="Flyers" className="w-full object-cover" />
+            <img src="/img/flyers-cover.svg" alt="Flyers" className="w-full object-cover" />
           </div>
         </div>
         <div>

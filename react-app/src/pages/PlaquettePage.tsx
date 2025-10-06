@@ -35,7 +35,7 @@ export default function PlaquettePage() {
       <div className="grid gap-8 md:grid-cols-2">
         <div>
           <div className="overflow-hidden rounded-xl border border-slate-200">
-            <img src="/img/plaquette-cover.jpg" alt="Plaquette" className="w-full object-cover" />
+            <img src="/img/plaquette-cover.svg" alt="Plaquette" className="w-full object-cover" />
           </div>
         </div>
         <div>

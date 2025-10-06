@@ -35,7 +35,7 @@ export default function EtiquettePage() {
       <div className="grid gap-8 md:grid-cols-2">
         <div>
           <div className="overflow-hidden rounded-xl border border-slate-200">
-            <img src="/img/etiquettes-cover.jpg" alt="Étiquettes personnalisées" className="w-full object-cover" />
+            <img src="/img/etiquettes-cover.svg" alt="Étiquettes personnalisées" className="w-full object-cover" />
           </div>
         </div>
         <div>

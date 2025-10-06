@@ -43,7 +43,7 @@ export default function CarteVisitePage() {
       <div className="grid gap-8 md:grid-cols-2">
         <div>
           <div className="overflow-hidden rounded-xl border border-slate-200">
-            <img src="/img/carte-visite-cover.jpg" alt="Cartes de visite" className="w-full object-cover" />
+            <img src="/img/carte-visite-cover.svg" alt="Cartes de visite" className="w-full object-cover" />
           </div>
         </div>
         <div>

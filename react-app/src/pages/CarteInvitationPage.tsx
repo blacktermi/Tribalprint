@@ -43,7 +43,7 @@ export default function CarteInvitationPage() {
       <div className="grid gap-8 md:grid-cols-2">
         <div>
           <div className="overflow-hidden rounded-xl border border-slate-200">
-            <img src="/img/carte-invitation-cover.jpg" alt="Cartes d'invitation" className="w-full object-cover" />
+            <img src="/img/carte-invitation-cover.svg" alt="Cartes d'invitation" className="w-full object-cover" />
           </div>
         </div>
         <div>

@@ -33,7 +33,7 @@ export default function StickersPage() {
       <div className="grid gap-8 md:grid-cols-2">
         <div>
           <div className="overflow-hidden rounded-xl border border-slate-200">
-            <img src="/img/stickers-cover.jpg" alt="Stickers personnalisés" className="w-full object-cover" />
+            <img src="/img/stickers-cover.svg" alt="Stickers personnalisés" className="w-full object-cover" />
           </div>
         </div>
         <div>

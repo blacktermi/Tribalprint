@@ -41,7 +41,7 @@ export default function CarteRemerciementPage() {
       <div className="grid gap-8 md:grid-cols-2">
         <div>
           <div className="overflow-hidden rounded-xl border border-slate-200">
-            <img src="/img/carte-remerciement-cover.jpg" alt="Cartes de remerciement" className="w-full object-cover" />
+            <img src="/img/carte-remerciement-cover.svg" alt="Cartes de remerciement" className="w-full object-cover" />
           </div>
         </div>
         <div>
