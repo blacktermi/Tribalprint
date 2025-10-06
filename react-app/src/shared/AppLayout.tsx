@@ -52,11 +52,19 @@ export default function AppLayout() {
             <nav className="hidden md:flex items-center gap-4 text-sm">
               <NavLink to="/a-propos" className="hover:text-slate-700">À propos</NavLink>
             </nav>
-            <div className="hidden md:flex items-center gap-4 text-sm text-slate-700">
-              <a className="hover:text-slate-900" href="#">Connexion</a>
-              <a className="hover:text-slate-900" href="#">Inscription</a>
-              <button aria-label="Favoris" className="hover:text-slate-900"><i className="far fa-heart"></i></button>
-              <button aria-label="Panier" className="hover:text-slate-900"><i className="fas fa-shopping-cart"></i></button>
+            <div className="hidden md:flex items-center gap-3 text-slate-700">
+              <a href="https://wa.me/2250787502637" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="hover:text-green-600">
+                <i className="fab fa-whatsapp text-lg"></i>
+              </a>
+              <a href="https://instagram.com/tribal.print" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-pink-600">
+                <i className="fab fa-instagram text-lg"></i>
+              </a>
+              <a href="https://facebook.com/tribalprint" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-blue-700">
+                <i className="fab fa-facebook text-lg"></i>
+              </a>
+              <a href="https://tiktok.com/@tribalprint" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="hover:text-black">
+                <i className="fab fa-tiktok text-lg"></i>
+              </a>
             </div>
           </div>
         </div>

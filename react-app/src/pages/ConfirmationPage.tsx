@@ -24,8 +24,13 @@ export default function ConfirmationPage() {
   const name = q.get('name') || ''
   const phone = q.get('phone') || ''
   const product = q.get('product') || ''
+  const ref = q.get('ref') || ''
+  const formatWanted = q.get('format') || ''
+  const qtyParam = q.get('qty') || q.get('packs') || ''
+  const photosParam = q.get('photos') || ''
   const totalStr = q.get('total')
   const subtotalStr = q.get('subtotal')
+  const discountStr = q.get('discount')
   const deliveryStr = q.get('delivery')
   const deliveryDate = q.get('delivery_date')
   const deliveryWindow = q.get('delivery_window')
@@ -33,12 +38,22 @@ export default function ConfirmationPage() {
 
   const total = totalStr ? Number(totalStr) : undefined
   const acompte = total && total > 20000 ? Math.round(total * 0.3) : undefined
+  const subtotalNum = subtotalStr ? Number(subtotalStr) : undefined
+  const discountNum = discountStr ? Number(discountStr) : undefined
+  const deliveryNum = deliveryStr ? Number(deliveryStr) : undefined
 
   // Lien WhatsApp pour confirmation de paiement à la livraison
   const waMsgLines = [
     'Bonjour, je confirme payer à la livraison pour ma commande Tribal Print.',
-    product ? `Produit: ${product}` : undefined,
-    typeof total !== 'undefined' ? `Total: ${total.toLocaleString()} FCFA` : undefined,
+    product ? `Produit: ${product}${ref ? ` • Réf: ${ref}` : ''}` : (ref ? `Réf: ${ref}` : undefined),
+    formatWanted ? `Format souhaité: ${formatWanted}` : undefined,
+    qtyParam ? `Quantité/Packs: ${qtyParam}` : undefined,
+    photosParam ? `Nombre de photos: ${photosParam}` : undefined,
+    'Récapitulatif de la commande:',
+    subtotalNum !== undefined ? `• Sous-total: ${subtotalNum.toLocaleString()} FCFA` : undefined,
+    discountNum ? `• Remise: ${discountNum.toLocaleString()} FCFA` : undefined,
+    deliveryNum !== undefined ? `• Livraison: ${deliveryNum.toLocaleString()} FCFA` : undefined,
+    total !== undefined ? `• Total: ${total.toLocaleString()} FCFA` : undefined,
     (deliveryDate || deliveryWindow || commune) ? `Livraison: ${deliveryDate || ''}${deliveryWindow ? ` • ${deliveryWindow}` : ''}${commune ? ` • ${commune}` : ''}` : undefined,
     name ? `Nom: ${name}` : undefined,
     phone ? `Téléphone: ${phone}` : undefined,
