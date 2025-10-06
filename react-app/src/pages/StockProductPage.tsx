@@ -44,7 +44,14 @@ const FORMAT_OPTIONS: Record<Kind, FormatOption[]> = {
 export default function StockProductPage() {
   const navigate = useNavigate()
   const { kind, id } = useParams<{ kind: Kind; id: string }>()
-  const k = (kind as Kind) || 'metal'
+  // Si l’URL pointe sur /metal/TB* par erreur, on requalifie en aluminium
+  const inferredKind: Kind = useMemo(() => {
+    const k0 = (kind as Kind) || 'metal'
+    const ref = (id || '').toUpperCase()
+    if (k0 === 'metal' && ref.startsWith('TB')) return 'aluminium'
+    return k0
+  }, [kind, id])
+  const k = inferredKind
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [zone, setZone] = useState<Zone>(1)
