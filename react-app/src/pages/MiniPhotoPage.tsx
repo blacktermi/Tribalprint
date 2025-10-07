@@ -9,6 +9,8 @@ export default function MiniPhotoPage() {
   return (
     <CategoryBaseForm
       title="Mini Photo"
+      productSlug="mini-photo"
+      productLabel="Mini Photo"
       packOptions={PACKS}
       bannerSrc="/img/miniphoto-cover.jpg"
     />

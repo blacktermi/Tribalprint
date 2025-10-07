@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { computeNextDelivery, DELIVERY, COMMUNES, type Zone } from '../shared/delivery'
+import { api, isApiConfigured } from '../lib/api/client'
+import { buildOrderPayload } from '../lib/api/buildOrderPayload'
 import UploadBox from '../components/UploadBox'
 
 export default function PlaquettePage() {
@@ -14,6 +16,7 @@ export default function PlaquettePage() {
   const [commune, setCommune] = useState(COMMUNES[1][0])
   const [file, setFile] = useState<File | null>(null)
   const [coverSrc, setCoverSrc] = useState('/img/plaquette-cover.jpg')
+  const [submitting, setSubmitting] = useState(false)
   const touched = true
 
   const unitPrice = 2500
@@ -31,9 +34,45 @@ export default function PlaquettePage() {
   // Aperçu géré par UploadBox
 
   const confirmationTo = useMemo(() => {
-  const params = new URLSearchParams({ product: 'plaquette', format: 'A4', pelliculage, qty: String(qty), unit_price: String(unitPrice), subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), zone: String(zone), commune, name: fullName.trim(), phone: phone.trim(), email: email.trim(), has_file: String(!!file), file_name: file?.name || '', file_type: file?.type || '', delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
+    const params = new URLSearchParams({ product: 'plaquette', format: 'A4', pelliculage, qty: String(qty), unit_price: String(unitPrice), subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), zone: String(zone), commune, name: fullName.trim(), phone: phone.trim(), email: email.trim(), has_file: String(!!file), file_name: file?.name || '', file_type: file?.type || '', delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
     return `/confirmation?${params.toString()}`
-  }, [pelliculage, qty, unitPrice, subtotal, discountAmount, delivery, total, zone, commune, fullName, phone, email, deliveryInfo.iso, deliveryInfo.window])
+  }, [pelliculage, qty, unitPrice, subtotal, discountAmount, delivery, total, zone, commune, fullName, phone, email, file, deliveryInfo.iso, deliveryInfo.window])
+
+  async function handleOrder() {
+    if (!formValid) return
+    if (!isApiConfigured()) {
+      navigate(confirmationTo)
+      return
+    }
+    try {
+      setSubmitting(true)
+      const payload = buildOrderPayload({
+        contact: { name: fullName.trim(), phone: phone.trim(), email: email.trim() || undefined },
+        delivery: { zone, commune, date: deliveryInfo.iso, window: deliveryInfo.window },
+        items: [
+          {
+            product_slug: 'plaquette',
+            product_label: 'Plaquette',
+            quantity: qty,
+            unit_price: unitPrice,
+            options: { format: 'A4', pelliculage },
+          },
+        ],
+        uploads: file ? [{ original_name: file.name, mime_type: file.type }] : undefined,
+        pricing: { subtotal, discount: discountAmount, delivery_fee: delivery, total },
+      })
+      const res = await api.createOrder(payload)
+      const url = new URL(confirmationTo, window.location.origin)
+      const qp = url.searchParams
+      if (res.ref) qp.set('ref', res.ref)
+      navigate(url.pathname + '?' + qp.toString())
+    } catch (e) {
+      console.error('createOrder failed (plaquette), fallback:', e)
+      navigate(confirmationTo)
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -114,7 +153,7 @@ export default function PlaquettePage() {
               {total > 20000 && (<div className="flex justify-between text-slate-800"><span>Acompte (30%) à régler</span><span>{Math.round(total * 0.30).toLocaleString()} FCFA</span></div>)}
             </div>
 
-            <button type="button" onClick={() => formValid && navigate(confirmationTo)} disabled={!formValid} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>Commander</button>
+            <button type="button" onClick={handleOrder} disabled={!formValid || submitting} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>{submitting ? 'Envoi…' : 'Commander'}</button>
           </div>
         </div>
       </div>

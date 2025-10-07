@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { computeNextDelivery } from '../shared/delivery'
+import { api, isApiConfigured } from '../lib/api/client'
+import { buildOrderPayload } from '../lib/api/buildOrderPayload'
 
 type Zone = 1 | 2 | 3
 
@@ -23,6 +25,7 @@ export default function MetalPosterPage() {
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const [zone, setZone] = useState<Zone>(1)
   const [commune, setCommune] = useState<string>(COMMUNES[1][0])
 
@@ -69,7 +72,44 @@ export default function MetalPosterPage() {
     return `/confirmation?${params.toString()}`
   }, [zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, email, quantities, photosByFormat])
 
-  const handleOrder = () => { setTouched(true); if (!formValid) return; navigate(confirmationTo) }
+  const handleOrder = async () => {
+    setTouched(true)
+    if (!formValid) return
+    if (!isApiConfigured()) { navigate(confirmationTo); return }
+    try {
+      setSubmitting(true)
+      // Construire les items à partir des formats sélectionnés
+      const items = FORMATS
+        .map(f => ({ code: f.code, label: f.label, qty: quantities[f.code] || 0, unit: f.price }))
+        .filter(x => x.qty > 0)
+        .map(x => ({
+          product_slug: 'metalposter',
+          product_label: 'Metal Poster',
+          quantity: x.qty,
+          unit_price: x.unit,
+          options: { format_code: x.code, format_label: x.label, width_cm: 32, height_cm: 48, photos_count: (photosByFormat[x.code]?.length || 0) },
+        }))
+
+      const payload = buildOrderPayload({
+        contact: { name: fullName.trim(), phone: phone.trim(), email: email.trim() || undefined },
+        delivery: { zone, commune, date: deliveryInfo.iso, window: deliveryInfo.window },
+        items,
+        // Pour l’instant, on envoie seulement la métadonnée: nombre total de photos par format
+        uploads: undefined,
+        pricing: { subtotal, discount: discountAmount, delivery_fee: delivery, total },
+      })
+      const res = await api.createOrder(payload)
+      const url = new URL(confirmationTo, window.location.origin)
+      const qp = url.searchParams
+      if (res.ref) qp.set('ref', res.ref)
+      navigate(url.pathname + '?' + qp.toString())
+    } catch (e) {
+      console.error('createOrder failed (metalposter), fallback:', e)
+      navigate(confirmationTo)
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -199,7 +239,7 @@ export default function MetalPosterPage() {
             </div>
 
             <div className="flex flex-wrap gap-3 items-center">
-              <button type="button" onClick={handleOrder} disabled={!formValid} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>Commander</button>
+              <button type="button" onClick={handleOrder} disabled={!formValid || submitting} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>{submitting ? 'Envoi…' : 'Commander'}</button>
             </div>
           </div>
         </div>

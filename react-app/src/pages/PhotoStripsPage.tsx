@@ -8,6 +8,8 @@ export default function PhotoStripsPage() {
   return (
     <CategoryBaseForm
       title="Photo Strips"
+      productSlug="photo-strips"
+      productLabel="Photo Strips"
       packOptions={PACKS}
       bannerSrc="/img/photostrips-cover.jpg"
     />

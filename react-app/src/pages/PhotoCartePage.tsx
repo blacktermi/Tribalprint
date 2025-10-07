@@ -8,6 +8,8 @@ export default function PhotoCartePage() {
   return (
     <CategoryBaseForm
       title="Photo Carte"
+      productSlug="photo-carte"
+      productLabel="Photo Carte"
       packOptions={PACKS}
       bannerSrc="/img/photocarte-cover.jpg"
     />

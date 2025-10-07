@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { computeNextDelivery } from '../shared/delivery'
+import { api, isApiConfigured } from '../lib/api/client'
+import { buildOrderPayload } from '../lib/api/buildOrderPayload'
 
 type Zone = 1 | 2 | 3
 type AlbumFormat = 'A5' | 'A4'
@@ -65,6 +67,7 @@ export default function AlbumPhotoPage() {
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [touched, setTouched] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   // Pour les albums, on calcule les pages à partir des photos afin d'éviter des pages blanches
   const divisor = 2 * qty // 2 photos par page et par album
@@ -85,7 +88,9 @@ export default function AlbumPhotoPage() {
   }, [format, pagesForPrice])
   const delivery = useMemo(() => DELIVERY[zone], [zone])
   const subtotal = price * qty
-  const total = subtotal + delivery
+  const discountAmount = 0
+  const totalAfterDiscount = subtotal - discountAmount
+  const total = totalAfterDiscount + delivery
   const deliveryInfo = useMemo(() => computeNextDelivery(), [])
   // 1 page = 2 photos (non utilisé pour album; pour album on valide la divisibilité des photos)
   const minPhotos = useMemo(() => (prodType === 'album' ? 0 : pages * 2 * qty), [prodType, pages, qty])
@@ -155,7 +160,8 @@ export default function AlbumPhotoPage() {
       pages: String(prodType === 'album' ? albumPages : pages),
       subtotal: String(subtotal),
       delivery: String(delivery),
-      total: String(total),
+  discount: String(discountAmount),
+  total: String(total),
       name: fullName.trim(),
       phone: phone.trim(),
       email: email.trim(),
@@ -168,14 +174,63 @@ export default function AlbumPhotoPage() {
       delivery_window: deliveryInfo.window,
     })
     return `/confirmation?${params.toString()}`
-  }, [prodType, format, qty, zone, commune, pages, subtotal, delivery, total, fullName, phone, email, photos.length, coverText, coverImage, pdfFile, coverFinish, deliveryInfo.iso, deliveryInfo.window])
+  }, [prodType, format, qty, zone, commune, pages, subtotal, discountAmount, delivery, total, fullName, phone, email, photos.length, coverText, coverImage, pdfFile, coverFinish, deliveryInfo.iso, deliveryInfo.window])
 
-  const handleOrder = () => {
-    if (!formValid) {
-      setTouched(true)
+  const handleOrder = async () => {
+    setTouched(true)
+    if (!formValid) return
+    if (!isApiConfigured()) {
+      navigate(confirmationTo)
       return
     }
-    navigate(confirmationTo)
+    const computedPages = prodType === 'album' ? albumPages : pages
+    const uploadsFiles: File[] = []
+    if (coverImage) uploadsFiles.push(coverImage)
+    if (pdfFile) uploadsFiles.push(pdfFile)
+    if (photos.length) uploadsFiles.push(...photos)
+    const options: Record<string, unknown> = {
+      product_type: prodType,
+      format,
+      pages: computedPages,
+      qty,
+    }
+    if (prodType === 'album') {
+      options.cover_finish = coverFinish
+      options.cover_text = coverText.trim()
+      options.photos_count = photos.length
+      options.min_photos_required = minAlbumPhotos
+    } else {
+      options.pdf_pages = pages
+      options.pdf_provided = !!pdfFile
+    }
+    try {
+      setSubmitting(true)
+      const payload = buildOrderPayload({
+        contact: { name: fullName.trim(), phone: phone.trim(), email: email.trim() || undefined },
+        delivery: { zone, commune, date: deliveryInfo.iso, window: deliveryInfo.window },
+        items: [
+          {
+            product_slug: 'albumphoto',
+            product_label: prodType === 'album' ? 'Album photo' : prodType === 'magazine' ? 'Magazine (PDF)' : 'Document (PDF)',
+            quantity: qty,
+            unit_price: price,
+            options,
+          },
+        ],
+        uploads: uploadsFiles.length ? uploadsFiles.map((f) => ({ original_name: f.name, mime_type: f.type })) : undefined,
+        pricing: { subtotal, discount: discountAmount, delivery_fee: delivery, total },
+      })
+      const res = await api.createOrder(payload)
+      const url = new URL(confirmationTo, window.location.origin)
+      const qp = url.searchParams
+      if (res.ref) qp.set('ref', res.ref)
+      navigate(url.pathname + '?' + qp.toString())
+    } catch (e) {
+      console.error('createOrder failed (albumphoto), fallback:', e)
+      navigate(confirmationTo)
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -482,14 +537,14 @@ export default function AlbumPhotoPage() {
               <button
                 type="button"
                 onClick={handleOrder}
-                disabled={!formValid}
+                disabled={!formValid || submitting}
                 className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${
-                  formValid ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'
+                  formValid && !submitting ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'
                 }`}
-                aria-disabled={!formValid}
+                aria-disabled={!formValid || submitting}
                 title={!formValid ? 'Complétez les champs requis et ajoutez vos photos' : 'Passer à la confirmation'}
               >
-                Commander
+                {submitting ? 'Envoi…' : 'Commander'}
               </button>
               <a href="/polaroids" className="rounded-full border border-slate-300 px-5 py-2 text-sm hover:border-slate-400">Polaroïds</a>
               <div className="text-xs text-slate-600">Contact: +225 07 87 50 26 37 — Livraison Mercredi & Samedi ({deliveryInfo.window})</div>

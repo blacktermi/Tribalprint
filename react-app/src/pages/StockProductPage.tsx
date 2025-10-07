@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { computeNextDelivery } from '../shared/delivery'
+import { api, isApiConfigured } from '../lib/api/client'
+import { buildOrderPayload } from '../lib/api/buildOrderPayload'
 
 type Zone = 1 | 2 | 3
 type Kind = 'metal' | 'bois' | 'aluminium' | 'canvas'
@@ -58,7 +60,8 @@ export default function StockProductPage() {
   const [zone, setZone] = useState<Zone>(1)
   const [commune, setCommune] = useState<string>(COMMUNES[1][0])
   const [qty, setQty] = useState(1)
-  const touched = true
+  const [touched, setTouched] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   // Sélection de format selon catégorie + id (TB => défaut A2, MT => défaut A1)
   const formatOptions = FORMAT_OPTIONS[k] || []
@@ -92,7 +95,47 @@ export default function StockProductPage() {
     return `/confirmation?${params.toString()}`
   }, [k, id, formatCode, selectedFormat?.code, zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, email, deliveryInfo.iso, deliveryInfo.window, qty])
 
-  const handleOrder = () => { if (!formValid) return; navigate(confirmationTo) }
+  const handleOrder = async () => {
+    setTouched(true)
+    if (!formValid || submitting) return
+    if (!isApiConfigured()) { navigate(confirmationTo); return }
+
+    const items = [
+      {
+        product_slug: `stock-${k}`,
+        product_label: label,
+        quantity: qty,
+        unit_price: price,
+        options: {
+          stock_kind: k,
+          stock_ref: id || '',
+          format_code: selectedFormat?.code ?? '',
+          format_label: selectedFormat?.label ?? '',
+          format_size: size,
+        },
+      },
+    ]
+
+    try {
+      setSubmitting(true)
+      const payload = buildOrderPayload({
+        contact: { name: fullName.trim(), phone: phone.trim(), email: email.trim() || undefined },
+        delivery: { zone, commune, date: deliveryInfo.iso, window: deliveryInfo.window },
+        items,
+        pricing: { subtotal, discount: discountAmount, delivery_fee: delivery, total },
+      })
+      const res = await api.createOrder(payload)
+      const url = new URL(confirmationTo, window.location.origin)
+      const qp = url.searchParams
+      if (res.ref) qp.set('ref', res.ref)
+      navigate(url.pathname + '?' + qp.toString())
+    } catch (error) {
+      console.error('createOrder failed (stock product), fallback:', error)
+      navigate(confirmationTo)
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   const imgSrc = `/img/${id}.jpg`
 
@@ -124,12 +167,12 @@ export default function StockProductPage() {
             <div className="grid gap-4 md:grid-cols-3">
               <div className="md:col-span-2">
                 <label className="text-sm font-medium">Nom et Prénom <span className="text-red-600">*</span></label>
-                <input type="text" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Ex: Koffi Kouadio" />
+                <input type="text" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={fullName} onChange={(e) => setFullName(e.target.value)} onBlur={() => setTouched(true)} placeholder="Ex: Koffi Kouadio" />
                 {touched && fullName.trim().length <= 1 && (<div className="mt-1 text-xs text-red-600">Nom et Prénom requis.</div>)}
               </div>
               <div>
                 <label className="text-sm font-medium">Numéro de téléphone <span className="text-red-600">*</span></label>
-                <input type="tel" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Ex: +225 07 87 50 26 37" />
+                <input type="tel" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={() => setTouched(true)} placeholder="Ex: +225 07 87 50 26 37" />
                 {touched && !phoneValid && (<div className="mt-1 text-xs text-red-600">Numéro invalide (8 à 15 chiffres).</div>)}
               </div>
             </div>
@@ -184,7 +227,15 @@ export default function StockProductPage() {
             </div>
 
             <div className="flex flex-wrap gap-3 items-center">
-              <button type="button" onClick={handleOrder} disabled={!formValid} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>Commander</button>
+              <button
+                type="button"
+                onClick={handleOrder}
+                disabled={!formValid || submitting}
+                className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}
+                aria-disabled={!formValid || submitting}
+              >
+                {submitting ? 'Envoi…' : 'Commander'}
+              </button>
             </div>
           </div>
         </div>

@@ -15,12 +15,37 @@ export default function CarteInvitationPage() {
   const [packs, setPacks] = useState(1) // 1 pack = 100 cartes
   const [format, setFormat] = useState<'24x14' | '14x10'>('24x14')
   const [pelliculage, setPelliculage] = useState<'mat' | 'brillant'>('mat')
-  const [submitting, setSubmitting] = useState(false)
-  const confirmationTo = useMemo(() => {
+  const [impression, setImpression] = useState<Impression>('recto-verso')
   const [bordsArrondis, setBordsArrondis] = useState(false)
   const [zone, setZone] = useState<Zone>(1)
   const [commune, setCommune] = useState(COMMUNES[1][0])
   const [file, setFile] = useState<File | null>(null)
+  const [coverSrc, setCoverSrc] = useState('/img/carteinvitation-cover.jpg')
+  const [submitting, setSubmitting] = useState(false)
+  const touched = true
+
+  // Prix différents par format
+  const BASE_BY_FORMAT: Record<'24x14'|'14x10', number> = { '24x14': 20000, '14x10': 18000 }
+  const unitPackPrice = BASE_BY_FORMAT[format]
+  const arrondiOptionPerPack = 3000
+  const delivery = useMemo(() => DELIVERY[zone], [zone])
+  const subtotalPacks = unitPackPrice * packs
+  const subtotalOptions = (bordsArrondis ? arrondiOptionPerPack : 0) * packs
+  const subtotal = subtotalPacks + subtotalOptions
+  const discountAmount = 0
+  const totalAfterDiscount = subtotal - discountAmount
+  const total = totalAfterDiscount + delivery
+  const deliveryInfo = useMemo(() => computeNextDelivery(), [])
+  const phoneValid = useMemo(() => { const d = phone.replace(/\D/g, ''); return d.length >= 8 && d.length <= 15 }, [phone])
+  const formValid = useMemo(() => fullName.trim().length > 1 && phoneValid && packs > 0, [fullName, phoneValid, packs])
+  const updateZone = (z: Zone) => { setZone(z); setCommune(COMMUNES[z][0]) }
+
+  // URL de confirmation existante (fallback/local)
+  const confirmationTo = useMemo(() => {
+    const params = new URLSearchParams({ product: 'carte-invitation', packs: String(packs), pack_size: '100', format, impression, pelliculage, bords_arrondis: String(bordsArrondis), zone: String(zone), commune, subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), name: fullName.trim(), phone: phone.trim(), email: email.trim(), has_file: String(!!file), file_name: file?.name || '', file_type: file?.type || '', delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
+    return `/confirmation?${params.toString()}`
+  }, [packs, format, pelliculage, bordsArrondis, zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, email, file, deliveryInfo.iso, deliveryInfo.window])
+
   async function handleOrder() {
     if (!formValid) return
     if (!isApiConfigured()) {
@@ -56,31 +81,6 @@ export default function CarteInvitationPage() {
       setSubmitting(false)
     }
   }
-  const [coverSrc, setCoverSrc] = useState('/img/carteinvitation-cover.jpg')
-  const touched = true
-
-  // Prix différents par format
-  const BASE_BY_FORMAT: Record<'24x14'|'14x10', number> = { '24x14': 20000, '14x10': 18000 }
-  const unitPackPrice = BASE_BY_FORMAT[format]
-  const arrondiOptionPerPack = 3000
-  const delivery = useMemo(() => DELIVERY[zone], [zone])
-  const subtotalPacks = unitPackPrice * packs
-  const subtotalOptions = (bordsArrondis ? arrondiOptionPerPack : 0) * packs
-  const subtotal = subtotalPacks + subtotalOptions
-  const discountAmount = 0
-  const totalAfterDiscount = subtotal - discountAmount
-  const total = totalAfterDiscount + delivery
-  const deliveryInfo = useMemo(() => computeNextDelivery(), [])
-  const phoneValid = useMemo(() => { const d = phone.replace(/\D/g, ''); return d.length >= 8 && d.length <= 15 }, [phone])
-  const formValid = useMemo(() => fullName.trim().length > 1 && phoneValid && packs > 0, [fullName, phoneValid, packs])
-  const updateZone = (z: Zone) => { setZone(z); setCommune(COMMUNES[z][0]) }
-
-  // Aperçu géré par UploadBox
-
-  const confirmationTo = useMemo(() => {
-  const params = new URLSearchParams({ product: 'carte-invitation', packs: String(packs), pack_size: '100', format, impression, pelliculage, bords_arrondis: String(bordsArrondis), zone: String(zone), commune, subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), name: fullName.trim(), phone: phone.trim(), email: email.trim(), has_file: String(!!file), file_name: file?.name || '', file_type: file?.type || '', delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
-    return `/confirmation?${params.toString()}`
-  }, [packs, format, pelliculage, bordsArrondis, zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, email, deliveryInfo.iso, deliveryInfo.window])
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -94,7 +94,6 @@ export default function CarteInvitationPage() {
           <h1 className="text-2xl font-semibold tracking-tight">Cartes d'invitation</h1>
           <p className="mt-1 text-slate-600 text-sm">100 cartes: 20 000 FCFA (24×14) • 18 000 FCFA (14×10). Impression recto ou recto-verso. Pelliculage mat ou brillant. Option bords arrondis: +3 000 FCFA par pack de 100.</p>
             
-
           <div className="mt-6 space-y-6">
             <div className="grid gap-4 md:grid-cols-3">
               <div className="md:col-span-2">
@@ -160,7 +159,7 @@ export default function CarteInvitationPage() {
 
             <div>
               <div className="text-sm font-medium mb-2">Zone de livraison</div>
-            <button type="button" onClick={handleOrder} disabled={!formValid || submitting} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>{submitting ? 'Envoi…' : 'Commander'}</button>
+              <div className="grid grid-cols-3 gap-3">
                 {[1,2,3].map((z) => (
                   <button key={z} onClick={() => updateZone(z as Zone)} className={`rounded-lg border px-3 py-2 text-sm text-left ${zone === z ? 'border-slate-900 ring-2 ring-slate-200' : 'border-slate-300 hover:border-slate-400'}`}>
                     <div className="font-medium">Zone {z}</div>
@@ -186,7 +185,7 @@ export default function CarteInvitationPage() {
               {total > 20000 && (<div className="flex justify-between text-slate-800"><span>Acompte (30%) à régler</span><span>{Math.round(total * 0.30).toLocaleString()} FCFA</span></div>)}
             </div>
 
-            <button type="button" onClick={() => formValid && navigate(confirmationTo)} disabled={!formValid} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>Commander</button>
+            <button type="button" onClick={handleOrder} disabled={!formValid || submitting} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>{submitting ? 'Envoi…' : 'Commander'}</button>
           </div>
         </div>
       </div>

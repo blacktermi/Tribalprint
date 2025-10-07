@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { computeNextDelivery } from '../shared/delivery'
+import { api, isApiConfigured } from '../lib/api/client'
+import { buildOrderPayload } from '../lib/api/buildOrderPayload'
 
 type Zone = 1 | 2 | 3
 type Pack = 'pola20' | 'pola20txt'
@@ -64,6 +66,7 @@ export default function PolaroidsPage() {
   const [email, setEmail] = useState('')
   // Gestion erreurs affichage
   const [touched, setTouched] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   const packPrice = useMemo(() => PRICES[pack], [pack])
   const delivery = useMemo(() => DELIVERY[zone], [zone])
@@ -138,12 +141,55 @@ export default function PolaroidsPage() {
     return `/confirmation?${params.toString()}`
   }, [pack, qty, zone, commune, subtotal, delivery, total, fullName, phone, email, photos.length, colorMode, finish, orientation, border, textFilled, deliveryInfo.iso, deliveryInfo.window])
 
-  const handleOrder = () => {
-    if (!formValid) {
-      setTouched(true)
-      return
+  const handleOrder = async () => {
+    setTouched(true)
+    if (!formValid || submitting) return
+    if (!isApiConfigured()) { navigate(confirmationTo); return }
+
+    const packLabel = pack === 'pola20' ? 'Pack 20 photos' : 'Pack 20 photos + texte'
+    const textsPayload = photoTexts
+      .map((text, index) => ({ index: index + 1, text: text.trim() }))
+      .filter((entry) => entry.text.length > 0)
+
+    try {
+      setSubmitting(true)
+      const payload = buildOrderPayload({
+        contact: { name: fullName.trim(), phone: phone.trim(), email: email.trim() || undefined },
+        delivery: { zone, commune, date: deliveryInfo.iso, window: deliveryInfo.window },
+        items: [
+          {
+            product_slug: 'polaroids',
+            product_label: 'Polaroïds',
+            quantity: qty,
+            unit_price: packPrice,
+            options: {
+              pack,
+              pack_label: packLabel,
+              color_mode: colorMode,
+              finish,
+              orientation,
+              border,
+              photos_count: photos.length,
+              min_photos_required: minPhotos,
+              texts_count: textsPayload.length,
+              photo_texts: textsPayload,
+            },
+          },
+        ],
+        uploads: photos.length ? photos.map((file) => ({ original_name: file.name, mime_type: file.type })) : undefined,
+        pricing: { subtotal, discount: 0, delivery_fee: delivery, total },
+      })
+      const res = await api.createOrder(payload)
+      const url = new URL(confirmationTo, window.location.origin)
+      const qp = url.searchParams
+      if (res.ref) qp.set('ref', res.ref)
+      navigate(url.pathname + '?' + qp.toString())
+    } catch (error) {
+      console.error('createOrder failed (polaroids), fallback:', error)
+      navigate(confirmationTo)
+    } finally {
+      setSubmitting(false)
     }
-    navigate(confirmationTo)
   }
 
   return (
@@ -456,14 +502,14 @@ export default function PolaroidsPage() {
               <button
                 type="button"
                 onClick={handleOrder}
-                disabled={!formValid}
+                disabled={!formValid || submitting}
                 className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${
-                  formValid ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'
+                  formValid && !submitting ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'
                 }`}
-                aria-disabled={!formValid}
+                aria-disabled={!formValid || submitting}
                 title={!formValid ? 'Ajoutez les photos et complétez vos informations' : 'Passer à la confirmation'}
               >
-                Commander
+                {submitting ? 'Envoi…' : 'Commander'}
               </button>
               <a href="/Albumphoto" className="rounded-full border border-slate-300 px-5 py-2 text-sm hover:border-slate-400">Album Photo</a>
               <div className="text-xs text-slate-600">Contact: +225 07 87 50 26 37 — Prochaine livraison: <strong>{deliveryInfo.label.split(' ')[0]}</strong> {deliveryInfo.label.split(' ').slice(1).join(' ')} ({deliveryInfo.window})</div>

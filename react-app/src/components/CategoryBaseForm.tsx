@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { COMMUNES, DELIVERY, Zone, computeNextDelivery } from '../shared/delivery'
+import { api, isApiConfigured } from '../lib/api/client'
+import { buildOrderPayload } from '../lib/api/buildOrderPayload'
 export type ColorMode = 'couleur' | 'noirblanc'
 export type Finish = 'brillant' | 'mat'
 export type Orientation = 'portrait' | 'paysage'
@@ -15,6 +17,8 @@ export type PackOption = {
 
 export type CategoryBaseFormProps = {
   title: string
+  productSlug: string
+  productLabel?: string
   packOptions: PackOption[]
   bannerSrc?: string
   getBannerSrc?: (packId: string) => string
@@ -22,7 +26,7 @@ export type CategoryBaseFormProps = {
 
 // DELIVERY, COMMUNES et Zone importés depuis '../shared/delivery'
 
-export default function CategoryBaseForm({ title, packOptions, bannerSrc, getBannerSrc }: CategoryBaseFormProps) {
+export default function CategoryBaseForm({ title, productSlug, productLabel, packOptions, bannerSrc, getBannerSrc }: CategoryBaseFormProps) {
   const navigate = useNavigate()
   const [selectedPackId, setSelectedPackId] = useState<string>(packOptions[0]?.id)
   const selectedPack = useMemo(
@@ -42,12 +46,15 @@ export default function CategoryBaseForm({ title, packOptions, bannerSrc, getBan
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [touched, setTouched] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   const delivery = useMemo(() => DELIVERY[zone], [zone])
   const deliveryInfo = useMemo(() => computeNextDelivery(), [])
   const packPrice = selectedPack?.price ?? 0
   const subtotal = packPrice * qty
-  const total = subtotal + delivery
+  const discountAmount = 0
+  const totalAfterDiscount = subtotal - discountAmount
+  const total = totalAfterDiscount + delivery
   const minPhotos = (selectedPack?.photoCount ?? 0) * qty
 
   const phoneValid = useMemo(() => {
@@ -92,6 +99,7 @@ export default function CategoryBaseForm({ title, packOptions, bannerSrc, getBan
       zone: String(zone),
       commune,
       subtotal: String(subtotal),
+      discount: String(discountAmount),
       delivery: String(delivery),
       total: String(total),
       name: fullName.trim(),
@@ -106,9 +114,57 @@ export default function CategoryBaseForm({ title, packOptions, bannerSrc, getBan
       delivery_window: deliveryInfo.window,
     })
     return `/confirmation?${params.toString()}`
-  }, [title, selectedPack?.label, selectedPack?.id, qty, zone, commune, subtotal, delivery, total, fullName, phone, email, photos.length, colorMode, finish, orientation, border, deliveryInfo.iso, deliveryInfo.window])
+  }, [title, selectedPack?.label, selectedPack?.id, qty, zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, email, photos.length, colorMode, finish, orientation, border, deliveryInfo.iso, deliveryInfo.window])
 
   const banner = getBannerSrc ? getBannerSrc(selectedPackId) : bannerSrc || '/img/banner.jpg'
+
+  const handleOrder = async () => {
+    if (!formValid) {
+      setTouched(true)
+      return
+    }
+    if (!isApiConfigured()) {
+      navigate(confirmationTo)
+      return
+    }
+    try {
+      setSubmitting(true)
+      const payload = buildOrderPayload({
+        contact: { name: fullName.trim(), phone: phone.trim(), email: email.trim() || undefined },
+        delivery: { zone, commune, date: deliveryInfo.iso, window: deliveryInfo.window },
+        items: [
+          {
+            product_slug: productSlug,
+            product_label: productLabel ?? title,
+            quantity: qty,
+            unit_price: packPrice,
+            options: {
+              pack_id: selectedPack?.id,
+              pack_label: selectedPack?.label,
+              photos_per_pack: selectedPack?.photoCount,
+              color_mode: colorMode,
+              finish,
+              orientation,
+              border,
+              total_photos_uploaded: photos.length,
+            },
+          },
+        ],
+        uploads: photos.length ? photos.map((f) => ({ original_name: f.name, mime_type: f.type })) : undefined,
+        pricing: { subtotal, discount: discountAmount, delivery_fee: delivery, total },
+      })
+      const res = await api.createOrder(payload)
+      const url = new URL(confirmationTo, window.location.origin)
+      const qp = url.searchParams
+      if (res.ref) qp.set('ref', res.ref)
+      navigate(url.pathname + '?' + qp.toString())
+    } catch (e) {
+      console.error('createOrder failed (category base form), fallback:', e)
+      navigate(confirmationTo)
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -264,8 +320,8 @@ export default function CategoryBaseForm({ title, packOptions, bannerSrc, getBan
             </div>
 
             <div className="flex flex-wrap gap-3 items-center">
-              <button type="button" onClick={() => { if (!formValid) { setTouched(true); return } navigate(confirmationTo) }} disabled={!formValid} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`} aria-disabled={!formValid} title={!formValid ? 'Ajoutez les photos et complétez vos informations' : 'Passer à la confirmation'}>
-                Commander
+              <button type="button" onClick={handleOrder} disabled={!formValid || submitting} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`} aria-disabled={!formValid || submitting} title={!formValid ? 'Ajoutez les photos et complétez vos informations' : 'Passer à la confirmation'}>
+                {submitting ? 'Envoi…' : 'Commander'}
               </button>
               <div className="text-xs text-slate-600">Contact: +225 07 87 50 26 37 — Livraison Mercredi & Samedi ({deliveryInfo.window})</div>
             </div>

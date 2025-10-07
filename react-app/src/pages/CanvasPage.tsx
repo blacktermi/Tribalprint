@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { computeNextDelivery } from '../shared/delivery'
+import { api, isApiConfigured } from '../lib/api/client'
+import { buildOrderPayload } from '../lib/api/buildOrderPayload'
 
 type Zone = 1 | 2 | 3
 type Orientation = 'portrait' | 'paysage'
@@ -50,6 +52,7 @@ export default function CanvasPage() {
   const [formatToAdd, setFormatToAdd] = useState<(typeof FORMATS)[number]['code'] | ''>('')
   const [qtyToAdd, setQtyToAdd] = useState<number>(1)
   const [touched, setTouched] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
 
   const delivery = useMemo(() => DELIVERY[zone], [zone])
   const subtotalStandard = useMemo(() => FORMATS.reduce((sum, f) => sum + (quantities[f.code] || 0) * f.price, 0), [quantities])
@@ -136,7 +139,96 @@ export default function CanvasPage() {
     return `/confirmation?${params.toString()}`
   }, [orientation, colorMode, zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, email, quantities, photosByFormat, shapesByFormat, customItems])
 
-  const handleOrder = () => { setTouched(true); if (!formValid) return; navigate(confirmationTo) }
+  const handleOrder = async () => {
+    setTouched(true)
+    if (!formValid) return
+    if (!isApiConfigured()) { navigate(confirmationTo); return }
+    const standardItems = FORMATS.map((f) => {
+      const quantity = quantities[f.code] || 0
+      if (!quantity) return null
+      const photos = photosByFormat[f.code] || []
+      const shape = shapesByFormat[f.code]
+      const baseWidth = f.widthCm
+      const baseHeight = f.heightCm
+      const squareSize = Math.min(baseWidth, baseHeight)
+      const widthCm = shape === 'square' ? squareSize : baseWidth
+      const heightCm = shape === 'square' ? squareSize : baseHeight
+      return {
+        product_slug: 'canvas',
+        product_label: 'Canvas',
+        quantity,
+        unit_price: f.price,
+        options: {
+          format_code: f.code,
+          format_label: f.label,
+          shape,
+          width_cm: widthCm,
+          height_cm: heightCm,
+          orientation,
+          color_mode: colorMode,
+          photos_count: photos.length,
+          variant: 'standard',
+        },
+      }
+    }).filter((it): it is NonNullable<typeof it> => Boolean(it))
+
+    const customItemsPayload = customItems.map((it, idx) => {
+      const quantity = it.qty || 0
+      const width = typeof it.width === 'number' ? it.width : 0
+      const height = typeof it.height === 'number' ? it.height : 0
+      if (!quantity || width <= 0 || height <= 0) return null
+      const unitPrice = computeCustomUnitPrice(width, height)
+      if (unitPrice <= 0) return null
+      return {
+        product_slug: 'canvas',
+        product_label: 'Canvas personnalisé',
+        quantity,
+        unit_price: unitPrice,
+        options: {
+          custom_id: it.id,
+          width_cm: width,
+          height_cm: height,
+          photos_count: it.photos.length,
+          variant: 'custom',
+          index: idx,
+          orientation,
+          color_mode: colorMode,
+        },
+      }
+    }).filter((it): it is NonNullable<typeof it> => Boolean(it))
+
+    const allItems = [...standardItems, ...customItemsPayload]
+
+    const uploadsFiles: File[] = []
+    FORMATS.forEach((f) => {
+      const photos = photosByFormat[f.code]
+      if (photos?.length) uploadsFiles.push(...photos)
+    })
+    customItems.forEach((it) => {
+      if (it.photos.length) uploadsFiles.push(...it.photos)
+    })
+
+    try {
+      setSubmitting(true)
+      const payload = buildOrderPayload({
+        contact: { name: fullName.trim(), phone: phone.trim(), email: email.trim() || undefined },
+        delivery: { zone, commune, date: deliveryInfo.iso, window: deliveryInfo.window },
+        items: allItems,
+        uploads: uploadsFiles.length ? uploadsFiles.map((f) => ({ original_name: f.name, mime_type: f.type })) : undefined,
+        pricing: { subtotal, discount: discountAmount, delivery_fee: delivery, total },
+      })
+      const res = await api.createOrder(payload)
+      const url = new URL(confirmationTo, window.location.origin)
+      const qp = url.searchParams
+      if (res.ref) qp.set('ref', res.ref)
+      navigate(url.pathname + '?' + qp.toString())
+    } catch (e) {
+      console.error('createOrder failed (canvas), fallback:', e)
+      navigate(confirmationTo)
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -371,7 +463,7 @@ export default function CanvasPage() {
             </div>
 
             <div className="flex flex-wrap gap-3 items-center">
-              <button type="button" onClick={handleOrder} disabled={!formValid} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>Commander</button>
+              <button type="button" onClick={handleOrder} disabled={!formValid || submitting} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>{submitting ? 'Envoi…' : 'Commander'}</button>
             </div>
           </div>
         </div>
