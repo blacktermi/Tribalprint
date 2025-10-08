@@ -1,6 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { computeNextDelivery } from '../shared/delivery'
+import { api, isApiConfigured } from '../lib/api/client'
+import { buildOrderPayload } from '../lib/api/buildOrderPayload'
+import { useMultiFileUpload } from '../lib/hooks/useMultiFileUpload'
+import { makeFileKey } from '../lib/uploads'
+import type { OrderUpload } from '../lib/api/types'
 
 type Zone = 1 | 2 | 3
 type Orientation = 'portrait' | 'paysage'
@@ -31,11 +36,14 @@ type Quantities = Record<(typeof FORMATS)[number]['code'], number>
 type PhotosByFormat = Record<(typeof FORMATS)[number]['code'], File[]>
 type CustomFormatItem = { id: string; width: number | ''; height: number | ''; qty: number; photos: File[] }
 
+type OrderItemInput = Parameters<typeof buildOrderPayload>[0]['items'][number]
+
 export default function TableauxBoisPage() {
   const navigate = useNavigate()
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const [orientation, setOrientation] = useState<Orientation>('portrait')
   const [marieLouise, setMarieLouise] = useState<MarieLouise>('sans')
   const [frameColor, setFrameColor] = useState<FrameColor>('noir-vernis')
@@ -53,6 +61,13 @@ export default function TableauxBoisPage() {
   const [formatToAdd, setFormatToAdd] = useState<(typeof FORMATS)[number]['code'] | ''>('')
   const [qtyToAdd, setQtyToAdd] = useState<number>(1)
   const [touched, setTouched] = useState(false)
+  const {
+    registerFiles,
+    unregisterFile,
+    ensureUploaded: ensureUploadedFiles,
+    uploading: uploadingPhotos,
+    lastError: photosUploadError,
+  } = useMultiFileUpload()
 
   const delivery = useMemo(() => DELIVERY[zone], [zone])
   const subtotalStandard = useMemo(() => FORMATS.reduce((sum, f) => sum + (quantities[f.code] || 0) * f.price, 0), [quantities])
@@ -95,24 +110,76 @@ export default function TableauxBoisPage() {
     const list = Array.from(e.target.files || [])
     const imgs = list.filter(f => f.type.startsWith('image/'))
     if (!imgs.length) return
-    setPhotosByFormat(prev => { const cur = prev[code] || []; const key = (f: File) => f.name + ':' + f.size; const map = new Map(cur.map(f => [key(f), f])); imgs.forEach(f => map.set(key(f), f)); return { ...prev, [code]: Array.from(map.values()) } })
+    setPhotosByFormat(prev => {
+      const current = prev[code] || []
+      const keys = new Set(current.map(file => makeFileKey(file)))
+      const next = [...current]
+      const newUnique: File[] = []
+      imgs.forEach(file => {
+        const key = makeFileKey(file)
+        if (keys.has(key)) return
+        keys.add(key)
+        next.push(file)
+        newUnique.push(file)
+      })
+      if (newUnique.length) registerFiles(newUnique)
+      return { ...prev, [code]: next }
+    })
     e.currentTarget.value = ''
   }
-  const removePhoto = (code: (typeof FORMATS)[number]['code'], idx: number) => setPhotosByFormat(prev => ({ ...prev, [code]: (prev[code] || []).filter((_, i) => i !== idx) }))
+  const removePhoto = (code: (typeof FORMATS)[number]['code'], idx: number) => setPhotosByFormat(prev => {
+    const current = prev[code] || []
+    const target = current[idx]
+    if (target) unregisterFile(target)
+    return { ...prev, [code]: current.filter((_, i) => i !== idx) }
+  })
   const setQty = (code: (typeof FORMATS)[number]['code'], q: number) => setQuantities(prev => ({ ...prev, [code]: Math.max(0, Math.min(50, q)) }))
-  const removeStandardFormat = (code: (typeof FORMATS)[number]['code']) => { setQuantities(prev => ({ ...prev, [code]: 0 })); setPhotosByFormat(prev => ({ ...prev, [code]: [] })) }
+  const removeStandardFormat = (code: (typeof FORMATS)[number]['code']) => {
+    setQuantities(prev => ({ ...prev, [code]: 0 }))
+    setPhotosByFormat(prev => {
+      const current = prev[code] || []
+      if (current.length) current.forEach(file => unregisterFile(file))
+      return { ...prev, [code]: [] }
+    })
+  }
   const addStandardFormat = () => { const code = formatToAdd; if (!code) return; setQuantities(prev => ({ ...prev, [code]: Math.max(1, Math.min(50, qtyToAdd || 1)) })); setFormatToAdd(''); setQtyToAdd(1) }
   const addCustomItem = () => setCustomItems(prev => ([...prev, { id: Math.random().toString(36).slice(2, 9), width: '', height: '', qty: 0, photos: [] }]))
-  const removeCustomItem = (id: string) => setCustomItems(prev => prev.filter(it => it.id !== id))
+  const removeCustomItem = (id: string) => setCustomItems(prev => {
+    const target = prev.find(it => it.id === id)
+    if (target?.photos.length) target.photos.forEach(file => unregisterFile(file))
+    return prev.filter(it => it.id !== id)
+  })
   const updateCustomField = (id: string, field: keyof CustomFormatItem, value: any) => setCustomItems(prev => prev.map(it => it.id === id ? { ...it, [field]: value } : it))
   const onCustomFilesSelected = (id: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = Array.from(e.target.files || [])
     const imgs = list.filter(f => f.type.startsWith('image/'))
     if (!imgs.length) return
-    setCustomItems(prev => prev.map(it => { if (it.id !== id) return it; const key = (f: File) => f.name + ':' + f.size; const map = new Map(it.photos.map(f => [key(f), f])); imgs.forEach(f => map.set(key(f), f)); const photos = Array.from(map.values()); const qty = (it.qty || 0) === 0 ? photos.length : it.qty; return { ...it, photos, qty } }))
+    setCustomItems(prev => prev.map(it => {
+      if (it.id !== id) return it
+      const key = (file: File) => makeFileKey(file)
+      const map = new Map(it.photos.map(f => [key(f), f]))
+      const newUnique: File[] = []
+      imgs.forEach(file => {
+        const k = key(file)
+        if (map.has(k)) return
+        map.set(k, file)
+        newUnique.push(file)
+      })
+      if (newUnique.length) registerFiles(newUnique)
+      const photos = Array.from(map.values())
+      const qty = (it.qty || 0) === 0 ? photos.length : it.qty
+      return { ...it, photos, qty }
+    }))
     e.currentTarget.value = ''
   }
-  const removeCustomPhoto = (id: string, idx: number) => setCustomItems(prev => prev.map(it => { if (it.id !== id) return it; const photos = it.photos.filter((_, i) => i !== idx); const qty = Math.min(it.qty || 0, photos.length); return { ...it, photos, qty } }))
+  const removeCustomPhoto = (id: string, idx: number) => setCustomItems(prev => prev.map(it => {
+    if (it.id !== id) return it
+    const target = it.photos[idx]
+    const photos = it.photos.filter((_, i) => i !== idx)
+    if (target) unregisterFile(target)
+    const qty = Math.min(it.qty || 0, photos.length)
+    return { ...it, photos, qty }
+  }))
   const confirmationTo = useMemo(() => {
     const params = new URLSearchParams({ product: 'tableaux-bois', orientation, marieLouise, frameColor, color: colorMode, zone: String(zone), commune, subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), name: fullName.trim(), phone: phone.trim(), email: email.trim(), delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
     FORMATS.forEach(f => { const q = quantities[f.code] || 0; if (q > 0) { params.append(`qty_${f.code}`, String(q)); params.append(`photos_${f.code}`, String(photosByFormat[f.code]?.length || 0)) } })
@@ -125,7 +192,105 @@ export default function TableauxBoisPage() {
     return `/confirmation?${params.toString()}`
   }, [orientation, marieLouise, frameColor, colorMode, zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, email, quantities, photosByFormat, customItems, deliveryInfo.iso, deliveryInfo.window])
 
-  const handleOrder = () => { setTouched(true); if (!formValid) return; navigate(confirmationTo) }
+  const handleOrder = async () => {
+    setTouched(true)
+    if (!formValid || uploadingPhotos) return
+    if (!isApiConfigured()) { navigate(confirmationTo); return }
+
+    const standardEntries: Array<{ item: OrderItemInput; files: File[] }> = []
+    FORMATS.forEach((format) => {
+      const quantity = quantities[format.code] || 0
+      if (!quantity) return
+      const photos = photosByFormat[format.code] || []
+      const item: OrderItemInput = {
+        product_slug: 'tableaux-bois',
+        product_label: 'Tableau Bois',
+        quantity,
+        unit_price: format.price,
+        options: {
+          format_code: format.code,
+          format_label: format.label,
+          width_cm: format.widthCm,
+          height_cm: format.heightCm,
+          orientation,
+          color_mode: colorMode,
+          marie_louise: marieLouise,
+          frame_color: frameColor,
+          photos_count: photos.length,
+          variant: 'standard',
+        },
+      }
+      standardEntries.push({ item, files: photos })
+    })
+
+    const customEntries: Array<{ item: OrderItemInput; files: File[] }> = []
+    customItems.forEach((it, idx) => {
+      const quantity = it.qty || 0
+      const width = typeof it.width === 'number' ? it.width : 0
+      const height = typeof it.height === 'number' ? it.height : 0
+      if (!quantity || width <= 0 || height <= 0) return
+      const unitPrice = computeCustomUnitPrice(width, height)
+      if (unitPrice <= 0) return
+      const item: OrderItemInput = {
+        product_slug: 'tableaux-bois',
+        product_label: 'Tableau Bois personnalisé',
+        quantity,
+        unit_price: unitPrice,
+        options: {
+          custom_id: it.id,
+          width_cm: width,
+          height_cm: height,
+          orientation,
+          color_mode: colorMode,
+          marie_louise: marieLouise,
+          frame_color: frameColor,
+          photos_count: it.photos.length,
+          variant: 'custom',
+          index: idx,
+        },
+      }
+      customEntries.push({ item, files: it.photos })
+    })
+
+    const itemEntries = [...standardEntries, ...customEntries]
+    const allItems = itemEntries.map(entry => entry.item)
+    const allFiles = itemEntries.flatMap(entry => entry.files)
+
+    try {
+      setSubmitting(true)
+      const uploadsMap: Map<string, OrderUpload> = allFiles.length ? await ensureUploadedFiles(allFiles) : new Map()
+      const uploads = allFiles.length
+        ? itemEntries.flatMap((entry, index) =>
+            entry.files.map((file) => {
+              const uploaded = uploadsMap.get(makeFileKey(file))
+              if (uploaded) {
+                return { ...uploaded, item_index: uploaded.item_index ?? index }
+              }
+              return { original_name: file.name, mime_type: file.type, item_index: index }
+            }),
+          )
+        : []
+
+      const payload = buildOrderPayload({
+        contact: { name: fullName.trim(), phone: phone.trim(), email: email.trim() || undefined },
+        delivery: { zone, commune, date: deliveryInfo.iso, window: deliveryInfo.window },
+        items: allItems,
+        uploads: uploads.length ? uploads : undefined,
+        pricing: { subtotal, discount: discountAmount, delivery_fee: delivery, total },
+      })
+
+      const res = await api.createOrder(payload)
+      const url = new URL(confirmationTo, window.location.origin)
+      const qp = url.searchParams
+      if (res.ref) qp.set('ref', res.ref)
+      navigate(url.pathname + '?' + qp.toString())
+    } catch (error) {
+      console.error('createOrder failed (tableaux bois), fallback:', error)
+      navigate(confirmationTo)
+    } finally {
+      setSubmitting(false)
+    }
+  }
   const groups = Array.from(new Set(FORMATS.map(f => f.group)))
   const formatsByGroup = (g: string) => FORMATS.filter(f => f.group === g)
 
@@ -368,7 +533,16 @@ export default function TableauxBoisPage() {
             </div>
 
             <div className="flex flex-wrap gap-3 items-center">
-              <button type="button" onClick={() => { setTouched(true); if (!formValid) return; navigate(confirmationTo) }} disabled={!formValid} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>Commander</button>
+              <button
+                type="button"
+                onClick={handleOrder}
+                disabled={!formValid || submitting || uploadingPhotos}
+                className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting && !uploadingPhotos ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}
+              >
+                {submitting ? 'Envoi…' : uploadingPhotos ? 'Téléversement…' : 'Commander'}
+              </button>
+              {uploadingPhotos && (<div className="text-xs text-slate-600">Téléversement des images en cours… veuillez patienter.</div>)}
+              {photosUploadError && (<div className="text-xs text-red-600">Téléversement: {photosUploadError}. Vous pourrez renvoyer les fichiers après confirmation.</div>)}
             </div>
           </div>
         </div>
