@@ -4,6 +4,7 @@ import { computeNextDelivery, DELIVERY, COMMUNES, type Zone } from '../shared/de
 import { api, isApiConfigured } from '../lib/api/client'
 import { buildOrderPayload } from '../lib/api/buildOrderPayload'
 import UploadBox from '../components/UploadBox'
+import { useSingleFileUpload } from '../lib/hooks/useSingleFileUpload'
 
 type Impression = 'recto' | 'recto-verso'
 
@@ -18,10 +19,10 @@ export default function CarteRemerciementPage() {
   const [bordsArrondis, setBordsArrondis] = useState(false)
   const [zone, setZone] = useState<Zone>(1)
   const [commune, setCommune] = useState(COMMUNES[1][0])
-  const [file, setFile] = useState<File | null>(null)
+  const { file, setFile, uploading: uploadingFile, uploadError, uploadResult, ensureUploaded } = useSingleFileUpload()
   const [coverSrc, setCoverSrc] = useState('/img/carteremerciment-cover.jpg')
   const [submitting, setSubmitting] = useState(false)
-  const touched = true
+  const [touched, setTouched] = useState(false)
 
   const UNIT_PACK_PRICES: Record<Impression, number> = { 'recto': 15000, 'recto-verso': 15000 }
   const unitPackPrice = UNIT_PACK_PRICES[impression]
@@ -46,13 +47,18 @@ export default function CarteRemerciementPage() {
   }, [packs, impression, pelliculage, bordsArrondis, zone, commune, subtotal, discountAmount, delivery, total, fullName, phone, email, file, deliveryInfo.iso, deliveryInfo.window])
 
   async function handleOrder() {
-    if (!formValid) return
+    setTouched(true)
+    if (!formValid || submitting || uploadingFile) return
     if (!isApiConfigured()) {
       navigate(confirmationTo)
       return
     }
     try {
       setSubmitting(true)
+      let uploaded = uploadResult
+      if (file && !uploaded) {
+        uploaded = await ensureUploaded()
+      }
       const payload = buildOrderPayload({
         contact: { name: fullName.trim(), phone: phone.trim(), email: email.trim() || undefined },
         delivery: { zone, commune, date: deliveryInfo.iso, window: deliveryInfo.window },
@@ -65,7 +71,7 @@ export default function CarteRemerciementPage() {
             options: { impression, pelliculage, bords_arrondis: bordsArrondis, format: '10x10', pack_size: 100 },
           },
         ],
-        uploads: file ? [{ original_name: file.name, mime_type: file.type }] : undefined,
+        uploads: uploaded ? [uploaded] : file ? [{ original_name: file.name, mime_type: file.type }] : undefined,
         pricing: { subtotal, discount: discountAmount, delivery_fee: delivery, total },
       })
       const res = await api.createOrder(payload)
@@ -97,12 +103,12 @@ export default function CarteRemerciementPage() {
             <div className="grid gap-4 md:grid-cols-3">
               <div className="md:col-span-2">
                 <label className="text-sm font-medium">Nom et Prénom <span className="text-red-600">*</span></label>
-                <input type="text" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Ex: Koné Aïcha" />
+                <input type="text" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={fullName} onChange={(e) => setFullName(e.target.value)} onBlur={() => setTouched(true)} placeholder="Ex: Koné Aïcha" />
                 {touched && fullName.trim().length <= 1 && (<div className="mt-1 text-xs text-red-600">Nom et Prénom requis.</div>)}
               </div>
               <div>
                 <label className="text-sm font-medium">Téléphone <span className="text-red-600">*</span></label>
-                <input type="tel" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Ex: +225 05 06 07 08 09" />
+                <input type="tel" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={() => setTouched(true)} placeholder="Ex: +225 05 06 07 08 09" />
                 {touched && !phoneValid && (<div className="mt-1 text-xs text-red-600">Numéro invalide.</div>)}
               </div>
             </div>
@@ -138,7 +144,7 @@ export default function CarteRemerciementPage() {
 
             <div>
               <div className="text-sm font-medium mb-2">Fichier (image ou PDF)</div>
-              <UploadBox file={file} onChange={setFile} accept="image/*,application/pdf" hint="Formats acceptés: JPG, PNG, HEIC, PDF • 1 fichier max" />
+              <UploadBox file={file} onChange={setFile} accept="image/*,application/pdf" hint="Formats acceptés: JPG, PNG, HEIC, PDF • 1 fichier max" uploading={uploadingFile} error={uploadError} />
               {!file && (<div className="mt-1 text-xs text-slate-500">Vous pourrez aussi l’envoyer après confirmation (WhatsApp/email).</div>)}
             </div>
 
@@ -178,7 +184,7 @@ export default function CarteRemerciementPage() {
               {total > 20000 && (<div className="flex justify-between text-slate-800"><span>Acompte (30%) à régler</span><span>{Math.round(total * 0.30).toLocaleString()} FCFA</span></div>)}
             </div>
 
-            <button type="button" onClick={handleOrder} disabled={!formValid || submitting} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>{submitting ? 'Envoi…' : 'Commander'}</button>
+            <button type="button" onClick={handleOrder} disabled={!formValid || submitting || uploadingFile} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting && !uploadingFile ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>{submitting ? 'Envoi…' : 'Commander'}</button>
           </div>
         </div>
       </div>

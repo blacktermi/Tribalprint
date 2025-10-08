@@ -4,6 +4,7 @@ import { computeNextDelivery, DELIVERY, COMMUNES, type Zone } from '../shared/de
 import { api, isApiConfigured } from '../lib/api/client'
 import { buildOrderPayload } from '../lib/api/buildOrderPayload'
 import UploadBox from '../components/UploadBox'
+import { useSingleFileUpload } from '../lib/hooks/useSingleFileUpload'
 
 export default function MugPage() {
   const navigate = useNavigate()
@@ -14,7 +15,7 @@ export default function MugPage() {
   const [qty, setQty] = useState(1)
   const [zone, setZone] = useState<Zone>(1)
   const [commune, setCommune] = useState(COMMUNES[1][0])
-  const [file, setFile] = useState<File | null>(null)
+  const { file, setFile, uploading: uploadingFile, uploadError, uploadResult, ensureUploaded } = useSingleFileUpload()
   const [coverSrc, setCoverSrc] = useState('/img/mug-cover.jpg')
   const [submitting, setSubmitting] = useState(false)
 
@@ -34,13 +35,17 @@ export default function MugPage() {
   }, [variant, qty, unitPrice, subtotal, discountAmount, delivery, total, zone, commune, fullName, phone, email, file, deliveryInfo.iso, deliveryInfo.window])
 
   async function handleOrder() {
-    if (!formValid) return
+    if (!formValid || submitting || uploadingFile) return
     if (!isApiConfigured()) {
       navigate(confirmationTo)
       return
     }
     try {
       setSubmitting(true)
+      let uploaded = uploadResult
+      if (file && !uploaded) {
+        uploaded = await ensureUploaded()
+      }
       const payload = buildOrderPayload({
         contact: { name: fullName.trim(), phone: phone.trim(), email: email.trim() || undefined },
         delivery: { zone, commune, date: deliveryInfo.iso, window: deliveryInfo.window },
@@ -53,7 +58,7 @@ export default function MugPage() {
             options: { variant },
           },
         ],
-        uploads: file ? [{ original_name: file.name, mime_type: file.type }] : undefined,
+        uploads: uploaded ? [uploaded] : file ? [{ original_name: file.name, mime_type: file.type }] : undefined,
         pricing: { subtotal, discount: discountAmount, delivery_fee: delivery, total },
       })
       const res = await api.createOrder(payload)
@@ -112,7 +117,7 @@ export default function MugPage() {
 
             <div>
               <div className="text-sm font-medium mb-2">Fichier (image ou PDF)</div>
-              <UploadBox file={file} onChange={setFile} accept="image/*,application/pdf" hint="Formats acceptés: JPG, PNG, HEIC, PDF • 1 fichier max" />
+              <UploadBox file={file} onChange={setFile} accept="image/*,application/pdf" hint="Formats acceptés: JPG, PNG, HEIC, PDF • 1 fichier max" uploading={uploadingFile} error={uploadError} />
             </div>
 
             <div>
@@ -142,7 +147,7 @@ export default function MugPage() {
               {total > 20000 && (<div className="flex justify-between text-slate-800"><span>Acompte (30%) à régler</span><span>{Math.round(total * 0.30).toLocaleString()} FCFA</span></div>)}
             </div>
 
-            <button type="button" onClick={handleOrder} disabled={!formValid || submitting} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>{submitting ? 'Envoi…' : 'Commander'}</button>
+            <button type="button" onClick={handleOrder} disabled={!formValid || submitting || uploadingFile} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting && !uploadingFile ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>{submitting ? 'Envoi…' : 'Commander'}</button>
           </div>
         </div>
       </div>

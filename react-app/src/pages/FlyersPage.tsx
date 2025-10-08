@@ -4,6 +4,7 @@ import { computeNextDelivery, DELIVERY, COMMUNES, type Zone } from '../shared/de
 import { api, isApiConfigured } from '../lib/api/client'
 import { buildOrderPayload } from '../lib/api/buildOrderPayload'
 import UploadBox from '../components/UploadBox'
+import { useSingleFileUpload } from '../lib/hooks/useSingleFileUpload'
 
 type Format = 'A5' | 'A4'
 type Impression = 'recto' | 'recto-verso'
@@ -24,9 +25,9 @@ export default function FlyersPage() {
   const [qty, setQty] = useState(50)
   const [zone, setZone] = useState<Zone>(1)
   const [commune, setCommune] = useState(COMMUNES[1][0])
-  const [file, setFile] = useState<File | null>(null)
+  const { file, setFile, uploading: uploadingFile, uploadError, uploadResult, ensureUploaded } = useSingleFileUpload()
   const [coverSrc, setCoverSrc] = useState('/img/flyers-cover.jpg')
-  const touched = true
+  const [touched, setTouched] = useState(false)
 
   const minQty = 50
   const unitPrice = UNIT_PRICES[format][impression]
@@ -48,7 +49,8 @@ export default function FlyersPage() {
   }, [format, impression, qty, unitPrice, subtotal, discountAmount, delivery, total, zone, commune, fullName, phone, email, deliveryInfo.iso, deliveryInfo.window])
 
   async function handleOrder() {
-    if (!formValid) return
+    setTouched(true)
+    if (!formValid || submitting || uploadingFile) return
     // Si l’API n’est pas configurée, fallback immédiat
     if (!isApiConfigured()) {
       navigate(confirmationTo)
@@ -56,6 +58,10 @@ export default function FlyersPage() {
     }
     try {
       setSubmitting(true)
+      let uploaded = uploadResult
+      if (file && !uploaded) {
+        uploaded = await ensureUploaded()
+      }
       // Préparer le payload standardisé
       const payload = buildOrderPayload({
         contact: { name: fullName.trim(), phone: phone.trim(), email: email.trim() || undefined },
@@ -69,8 +75,7 @@ export default function FlyersPage() {
             options: { format, impression },
           },
         ],
-        // TODO: intégrer les uploads signés; pour l’instant on passe le nom/mime à titre indicatif
-        uploads: file ? [{ original_name: file.name, mime_type: file.type }] : undefined,
+        uploads: uploaded ? [uploaded] : file ? [{ original_name: file.name, mime_type: file.type }] : undefined,
         pricing: { subtotal, discount: discountAmount, delivery_fee: delivery, total },
       })
       const res = await api.createOrder(payload)
@@ -104,12 +109,12 @@ export default function FlyersPage() {
             <div className="grid gap-4 md:grid-cols-3">
               <div className="md:col-span-2">
                 <label className="text-sm font-medium">Nom et Prénom <span className="text-red-600">*</span></label>
-                <input type="text" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Ex: Kouamé Michel" />
+                <input type="text" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={fullName} onChange={(e) => setFullName(e.target.value)} onBlur={() => setTouched(true)} placeholder="Ex: Kouamé Michel" />
                 {touched && fullName.trim().length <= 1 && (<div className="mt-1 text-xs text-red-600">Nom et Prénom requis.</div>)}
               </div>
               <div>
                 <label className="text-sm font-medium">Téléphone <span className="text-red-600">*</span></label>
-                <input type="tel" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Ex: +225 07 00 11 22 33" />
+                <input type="tel" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" value={phone} onChange={(e) => setPhone(e.target.value)} onBlur={() => setTouched(true)} placeholder="Ex: +225 07 00 11 22 33" />
                 {touched && !phoneValid && (<div className="mt-1 text-xs text-red-600">Numéro invalide.</div>)}
               </div>
             </div>
@@ -143,7 +148,7 @@ export default function FlyersPage() {
 
             <div>
               <div className="text-sm font-medium mb-2">Fichier (image ou PDF)</div>
-              <UploadBox file={file} onChange={setFile} accept="image/*,application/pdf" hint="Formats acceptés: JPG, PNG, HEIC, PDF • 1 fichier max" />
+              <UploadBox file={file} onChange={setFile} accept="image/*,application/pdf" hint="Formats acceptés: JPG, PNG, HEIC, PDF • 1 fichier max" uploading={uploadingFile} error={uploadError} />
               {!file && (<div className="mt-1 text-xs text-slate-500">Vous pourrez aussi l’envoyer après confirmation (WhatsApp/email).</div>)}
             </div>
 
@@ -174,7 +179,7 @@ export default function FlyersPage() {
               {total > 20000 && (<div className="flex justify-between text-slate-800"><span>Acompte (30%) à régler</span><span>{Math.round(total * 0.30).toLocaleString()} FCFA</span></div>)}
             </div>
 
-            <button type="button" onClick={handleOrder} disabled={!formValid || submitting} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>{submitting ? 'Envoi…' : 'Commander'}</button>
+            <button type="button" onClick={handleOrder} disabled={!formValid || submitting || uploadingFile} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting && !uploadingFile ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>{submitting ? 'Envoi…' : 'Commander'}</button>
           </div>
         </div>
       </div>

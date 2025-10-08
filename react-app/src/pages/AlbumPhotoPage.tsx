@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { computeNextDelivery } from '../shared/delivery'
 import { api, isApiConfigured } from '../lib/api/client'
 import { buildOrderPayload } from '../lib/api/buildOrderPayload'
+import { useSingleFileUpload } from '../lib/hooks/useSingleFileUpload'
+import { useMultiFileUpload } from '../lib/hooks/useMultiFileUpload'
+import { makeFileKey } from '../lib/uploads'
+import type { OrderUpload } from '../lib/api/types'
 
 type Zone = 1 | 2 | 3
 type AlbumFormat = 'A5' | 'A4'
@@ -54,13 +58,34 @@ export default function AlbumPhotoPage() {
   // Spécifiques Album
   const [pages, setPages] = useState<number>(10) // 20 photos = 10 pages (1 page pour 2 photos)
   const [coverText, setCoverText] = useState<string>('')
-  const [coverImage, setCoverImage] = useState<File | null>(null)
+  const {
+    file: coverFile,
+    setFile: setCoverFile,
+    uploading: uploadingCover,
+    uploadResult: coverUploadResult,
+    uploadError: coverUploadError,
+    ensureUploaded: ensureCoverUploaded,
+  } = useSingleFileUpload()
   const [coverFinish, setCoverFinish] = useState<CoverFinish>('brillant')
 
   // Photos à importer (intérieures)
   const [photos, setPhotos] = useState<File[]>([])
   // Document PDF (magazine/document)
-  const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const {
+    file: pdfFile,
+    setFile: setPdfFile,
+    uploading: uploadingPdf,
+    uploadResult: pdfUploadResult,
+    uploadError: pdfUploadError,
+    ensureUploaded: ensurePdfUploaded,
+  } = useSingleFileUpload()
+  const {
+    registerFiles: registerPhotoFiles,
+    unregisterFile: unregisterPhotoFile,
+    ensureUploaded: ensurePhotosUploaded,
+    uploading: uploadingPhotos,
+    lastError: photosUploadError,
+  } = useMultiFileUpload()
 
   // Infos client
   const [fullName, setFullName] = useState('')
@@ -107,13 +132,13 @@ export default function AlbumPhotoPage() {
         commonOk &&
         photos.length >= minAlbumPhotos &&
         albumDivisible &&
-        !!coverImage &&
+        !!coverFile &&
         coverText.trim().length > 0
       )
     }
     // magazine/document: PDF requis, on n'exige pas les photos/cover
     return commonOk && !!pdfFile
-  }, [prodType, fullName, phoneValid, pages, albumPages, photos.length, minAlbumPhotos, albumDivisible, coverImage, coverText, pdfFile])
+  }, [prodType, fullName, phoneValid, pages, albumPages, photos.length, minAlbumPhotos, albumDivisible, coverFile, coverText, pdfFile])
 
   const updateZone = (z: Zone) => {
     setZone(z)
@@ -122,13 +147,21 @@ export default function AlbumPhotoPage() {
 
   const onCoverSelected: React.ChangeEventHandler<HTMLInputElement> = (e) => {
     const f = (e.target.files && e.target.files[0]) || null
-    if (f && f.type.startsWith('image/')) setCoverImage(f)
+    if (f && f.type.startsWith('image/')) {
+      setCoverFile(f)
+    } else {
+      setCoverFile(null)
+    }
     e.currentTarget.value = ''
   }
 
   const onPdfSelected: React.ChangeEventHandler<HTMLInputElement> = (e) => {
     const f = (e.target.files && e.target.files[0]) || null
-    if (f && f.type === 'application/pdf') setPdfFile(f)
+    if (f && f.type === 'application/pdf') {
+      setPdfFile(f)
+    } else {
+      setPdfFile(null)
+    }
     e.currentTarget.value = ''
   }
 
@@ -137,16 +170,22 @@ export default function AlbumPhotoPage() {
     const imgs = list.filter((f) => f.type.startsWith('image/'))
     if (!imgs.length) return
     setPhotos((prev) => {
-      const key = (f: File) => f.name + ':' + f.size
-      const prevKeys = new Set(prev.map(key))
-      const newUnique = imgs.filter((f) => !prevKeys.has(key(f)))
+      const prevKeys = new Set(prev.map((f) => makeFileKey(f)))
+      const newUnique = imgs.filter((f) => !prevKeys.has(makeFileKey(f)))
+      if (newUnique.length) {
+        registerPhotoFiles(newUnique)
+      }
       return [...prev, ...newUnique]
     })
     e.currentTarget.value = ''
   }
 
   const removePhoto = (idx: number) => {
-    setPhotos((prev) => prev.filter((_, i) => i !== idx))
+    setPhotos((prev) => {
+      const target = prev[idx]
+      if (target) unregisterPhotoFile(target)
+      return prev.filter((_, i) => i !== idx)
+    })
   }
 
   const confirmationTo = useMemo(() => {
@@ -167,27 +206,23 @@ export default function AlbumPhotoPage() {
       email: email.trim(),
       photos: String(photos.length),
       coverText: coverText.trim(),
-      coverImage: coverImage ? '1' : '0',
+      coverImage: coverFile ? '1' : '0',
       pdf: pdfFile ? '1' : '0',
       coverFinish,
       delivery_date: deliveryInfo.iso,
       delivery_window: deliveryInfo.window,
     })
     return `/confirmation?${params.toString()}`
-  }, [prodType, format, qty, zone, commune, pages, subtotal, discountAmount, delivery, total, fullName, phone, email, photos.length, coverText, coverImage, pdfFile, coverFinish, deliveryInfo.iso, deliveryInfo.window])
+  }, [prodType, format, qty, zone, commune, pages, subtotal, discountAmount, delivery, total, fullName, phone, email, photos.length, coverText, coverFile, pdfFile, coverFinish, deliveryInfo.iso, deliveryInfo.window])
 
   const handleOrder = async () => {
     setTouched(true)
-    if (!formValid) return
+    if (!formValid || uploadingCover || uploadingPdf || uploadingPhotos) return
     if (!isApiConfigured()) {
       navigate(confirmationTo)
       return
     }
     const computedPages = prodType === 'album' ? albumPages : pages
-    const uploadsFiles: File[] = []
-    if (coverImage) uploadsFiles.push(coverImage)
-    if (pdfFile) uploadsFiles.push(pdfFile)
-    if (photos.length) uploadsFiles.push(...photos)
     const options: Record<string, unknown> = {
       product_type: prodType,
       format,
@@ -205,6 +240,35 @@ export default function AlbumPhotoPage() {
     }
     try {
       setSubmitting(true)
+      let coverUploaded = coverUploadResult
+      if (coverFile && !coverUploaded) {
+        coverUploaded = await ensureCoverUploaded()
+      }
+      let pdfUploaded = pdfUploadResult
+      if (pdfFile && !pdfUploaded) {
+        pdfUploaded = await ensurePdfUploaded()
+      }
+  const photosMap = photos.length ? await ensurePhotosUploaded(photos) : new Map<string, OrderUpload>()
+
+  const uploads: OrderUpload[] = []
+      if (coverFile) {
+        const entry = coverUploaded ? { ...coverUploaded } : { original_name: coverFile.name, mime_type: coverFile.type }
+        uploads.push({ ...entry, item_index: entry.item_index ?? 0 })
+      }
+      if (pdfFile) {
+        const entry = pdfUploaded ? { ...pdfUploaded } : { original_name: pdfFile.name, mime_type: pdfFile.type }
+        uploads.push({ ...entry, item_index: entry.item_index ?? 0 })
+      }
+      if (photos.length) {
+        photos.forEach((file) => {
+          const uploaded = photosMap.get(makeFileKey(file))
+          if (uploaded) {
+            uploads.push({ ...uploaded, item_index: uploaded.item_index ?? 0 })
+          } else {
+            uploads.push({ original_name: file.name, mime_type: file.type, item_index: 0 })
+          }
+        })
+      }
       const payload = buildOrderPayload({
         contact: { name: fullName.trim(), phone: phone.trim(), email: email.trim() || undefined },
         delivery: { zone, commune, date: deliveryInfo.iso, window: deliveryInfo.window },
@@ -217,7 +281,7 @@ export default function AlbumPhotoPage() {
             options,
           },
         ],
-        uploads: uploadsFiles.length ? uploadsFiles.map((f) => ({ original_name: f.name, mime_type: f.type })) : undefined,
+        uploads: uploads.length ? uploads : undefined,
         pricing: { subtotal, discount: discountAmount, delivery_fee: delivery, total },
       })
       const res = await api.createOrder(payload)
@@ -379,11 +443,17 @@ export default function AlbumPhotoPage() {
                         <input type="file" accept="image/*" onChange={onCoverSelected} className="hidden" />
                         <span className="rounded-full bg-slate-900 px-4 py-2 text-xs font-medium text-white">Choisir</span>
                       </label>
-                      {coverImage && (
-                        <div className="mt-3 text-xs text-slate-700">Fichier sélectionné: {coverImage.name}</div>
+                      {coverFile && (
+                        <div className="mt-3 text-xs text-slate-700">Fichier sélectionné: {coverFile.name}</div>
+                      )}
+                      {uploadingCover && (
+                        <div className="mt-2 text-xs text-slate-600">Téléversement de l’image de couverture…</div>
+                      )}
+                      {coverUploadError && (
+                        <div className="mt-2 text-xs text-red-600">Téléversement: {coverUploadError}. Vous pourrez tout de même envoyer le fichier après commande.</div>
                       )}
                       <div className="mt-2 text-xs text-slate-500">La photo de couverture ne compte pas dans le calcul des pages.</div>
-                      {touched && !coverImage && (
+                      {touched && !coverFile && (
                         <div className="mt-2 text-xs text-red-600">Veuillez ajouter une image de couverture.</div>
                       )}
                     </div>
@@ -428,6 +498,12 @@ export default function AlbumPhotoPage() {
                     </label>
                     {pdfFile && (
                       <div className="mt-3 text-xs text-slate-700">Fichier sélectionné: {pdfFile.name}</div>
+                    )}
+                    {uploadingPdf && (
+                      <div className="mt-2 text-xs text-slate-600">Téléversement du PDF en cours…</div>
+                    )}
+                    {pdfUploadError && (
+                      <div className="mt-2 text-xs text-red-600">Téléversement: {pdfUploadError}. Vous pourrez réenvoyer le document après confirmation.</div>
                     )}
                     {touched && !pdfFile && (
                       <div className="mt-2 text-xs text-red-600">Veuillez ajouter votre document PDF.</div>
@@ -499,6 +575,12 @@ export default function AlbumPhotoPage() {
                   {touched && (photos.length < minAlbumPhotos || !albumDivisible) && (
                     <div className="mt-2 text-xs text-red-600">Ajoutez au moins {minAlbumPhotos} photos et veillez à ce que leur nombre soit divisible par {divisor} (actuellement {photos.length}).</div>
                   )}
+                  {uploadingPhotos && (
+                    <div className="mt-2 text-xs text-slate-600">Téléversement des photos en cours… Patientez avant de valider.</div>
+                  )}
+                  {photosUploadError && (
+                    <div className="mt-2 text-xs text-red-600">Téléversement: {photosUploadError}. Vous pourrez transmettre les fichiers restants après confirmation.</div>
+                  )}
                   {/* Aperçu */}
                   {photos.length > 0 && (
                     <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
@@ -537,14 +619,18 @@ export default function AlbumPhotoPage() {
               <button
                 type="button"
                 onClick={handleOrder}
-                disabled={!formValid || submitting}
+                disabled={!formValid || submitting || uploadingCover || uploadingPdf || uploadingPhotos}
                 className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${
-                  formValid && !submitting ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'
+                  formValid && !submitting && !uploadingCover && !uploadingPdf && !uploadingPhotos ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'
                 }`}
-                aria-disabled={!formValid || submitting}
-                title={!formValid ? 'Complétez les champs requis et ajoutez vos photos' : 'Passer à la confirmation'}
+                aria-disabled={!formValid || submitting || uploadingCover || uploadingPdf || uploadingPhotos}
+                title={!formValid
+                  ? 'Complétez les champs requis et ajoutez vos fichiers'
+                  : (uploadingCover || uploadingPdf || uploadingPhotos)
+                    ? 'Téléversement en cours… merci de patienter'
+                    : 'Passer à la confirmation'}
               >
-                {submitting ? 'Envoi…' : 'Commander'}
+                {submitting ? 'Envoi…' : (uploadingCover || uploadingPdf || uploadingPhotos) ? 'Téléversement…' : 'Commander'}
               </button>
               <a href="/polaroids" className="rounded-full border border-slate-300 px-5 py-2 text-sm hover:border-slate-400">Polaroïds</a>
               <div className="text-xs text-slate-600">Contact: +225 07 87 50 26 37 — Livraison Mercredi & Samedi ({deliveryInfo.window})</div>

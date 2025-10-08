@@ -7,9 +7,11 @@ export type UploadBoxProps = {
   multiple?: boolean
   label?: string
   hint?: string
+  uploading?: boolean
+  error?: string | null
 }
 
-export default function UploadBox({ file, onChange, accept = 'image/*,application/pdf', multiple = false, label, hint }: UploadBoxProps) {
+export default function UploadBox({ file, onChange, accept = 'image/*,application/pdf', multiple = false, label, hint, uploading = false, error = null }: UploadBoxProps) {
   const inputRef = useRef<HTMLInputElement | null>(null)
   const [isDragging, setDragging] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -73,8 +75,10 @@ export default function UploadBox({ file, onChange, accept = 'image/*,applicatio
             </div>
             <div className="mt-1 text-xs text-slate-500">{effectiveHint}</div>
             <div className="mt-3">
-              <button type="button" className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium bg-slate-900 text-white hover:bg-slate-800" onClick={onClick}>Ajouter</button>
-              <input ref={inputRef} type="file" className="hidden" accept={accept} multiple={multiple} onChange={(e) => onFiles(e.target.files)} />
+              <button type="button" className={`inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium ${uploading ? 'bg-slate-400 text-white cursor-not-allowed' : 'bg-slate-900 text-white hover:bg-slate-800'}`} onClick={onClick} disabled={uploading}>
+                {uploading ? 'Envoi…' : 'Ajouter'}
+              </button>
+              <input ref={inputRef} type="file" className="hidden" accept={accept} multiple={multiple} onChange={(e) => onFiles(e.target.files)} disabled={uploading} />
             </div>
           </div>
           {file && (
@@ -99,6 +103,8 @@ export default function UploadBox({ file, onChange, accept = 'image/*,applicatio
           <div className="text-xs text-slate-500">Minimum 1 fichier</div>
         )}
       </div>
+      {uploading && (<div className="mt-1 text-xs text-slate-500">Téléversement en cours…</div>)}
+      {error && (<div className="mt-1 text-xs text-red-600">{error}</div>)}
     </div>
   )
 }

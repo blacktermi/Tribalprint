@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { computeNextDelivery } from '../shared/delivery'
 import { api, isApiConfigured } from '../lib/api/client'
 import { buildOrderPayload } from '../lib/api/buildOrderPayload'
+import { useMultiFileUpload } from '../lib/hooks/useMultiFileUpload'
+import { makeFileKey } from '../lib/uploads'
 
 type Zone = 1 | 2 | 3
 
@@ -35,6 +37,7 @@ export default function MetalPosterPage() {
   const [photosByFormat, setPhotosByFormat] = useState<PhotosByFormat>(initialPhotos)
   const selectedStandard = useMemo(() => FORMATS.filter(f => (quantities[f.code] || 0) > 0), [quantities])
   const [touched, setTouched] = useState(false)
+  const { registerFiles, unregisterFile, ensureUploaded: ensureUploadedFiles, uploading: uploadingFiles, lastError: uploadError } = useMultiFileUpload()
 
   const delivery = useMemo(() => DELIVERY[zone], [zone])
   const subtotalStandard = useMemo(() => FORMATS.reduce((sum, f) => sum + (quantities[f.code] || 0) * f.price, 0), [quantities])
@@ -59,10 +62,29 @@ export default function MetalPosterPage() {
     const list = Array.from(e.target.files || [])
     const imgs = list.filter(f => f.type.startsWith('image/'))
     if (!imgs.length) return
-    setPhotosByFormat(prev => { const cur = prev[code] || []; const key = (f: File) => f.name + ':' + f.size; const map = new Map(cur.map(f => [key(f), f])); imgs.forEach(f => map.set(key(f), f)); return { ...prev, [code]: Array.from(map.values()) } })
+    setPhotosByFormat(prev => {
+      const cur = prev[code] || []
+      const keys = new Set(cur.map((file) => makeFileKey(file)))
+      const next = [...cur]
+      const newUnique: File[] = []
+      imgs.forEach((file) => {
+        const key = makeFileKey(file)
+        if (keys.has(key)) return
+        keys.add(key)
+        next.push(file)
+        newUnique.push(file)
+      })
+      if (newUnique.length) registerFiles(newUnique)
+      return { ...prev, [code]: next }
+    })
     e.currentTarget.value = ''
   }
-  const removePhoto = (code: (typeof FORMATS)[number]['code'], idx: number) => setPhotosByFormat(prev => ({ ...prev, [code]: (prev[code] || []).filter((_, i) => i !== idx) }))
+  const removePhoto = (code: (typeof FORMATS)[number]['code'], idx: number) => setPhotosByFormat(prev => {
+    const current = prev[code] || []
+    const target = current[idx]
+    if (target) unregisterFile(target)
+    return { ...prev, [code]: current.filter((_, i) => i !== idx) }
+  })
   const setQty = (code: (typeof FORMATS)[number]['code'], q: number) => setQuantities(prev => ({ ...prev, [code]: Math.max(0, Math.min(50, q)) }))
   const confirmationTo = useMemo(() => {
   const params = new URLSearchParams({ product: 'metalposter', zone: String(zone), commune, subtotal: String(subtotal), discount: String(discountAmount), delivery: String(delivery), total: String(total), name: fullName.trim(), phone: phone.trim(), email: email.trim(), delivery_date: deliveryInfo.iso, delivery_window: deliveryInfo.window })
@@ -74,28 +96,56 @@ export default function MetalPosterPage() {
 
   const handleOrder = async () => {
     setTouched(true)
-    if (!formValid) return
+    if (!formValid || uploadingFiles) return
     if (!isApiConfigured()) { navigate(confirmationTo); return }
     try {
       setSubmitting(true)
-      // Construire les items à partir des formats sélectionnés
-      const items = FORMATS
-        .map(f => ({ code: f.code, label: f.label, qty: quantities[f.code] || 0, unit: f.price }))
-        .filter(x => x.qty > 0)
-        .map(x => ({
-          product_slug: 'metalposter',
-          product_label: 'Metal Poster',
-          quantity: x.qty,
-          unit_price: x.unit,
-          options: { format_code: x.code, format_label: x.label, width_cm: 32, height_cm: 48, photos_count: (photosByFormat[x.code]?.length || 0) },
+      const allFiles = FORMATS.flatMap(f => photosByFormat[f.code] || [])
+      const uploadsMap = await ensureUploadedFiles(allFiles)
+
+      const itemEntries = FORMATS
+        .map(f => ({
+          format: f,
+          qty: quantities[f.code] || 0,
+          unit: f.price,
         }))
+        .filter(entry => entry.qty > 0)
+        .map(entry => ({
+          item: {
+            product_slug: 'metalposter' as const,
+            product_label: 'Metal Poster',
+            quantity: entry.qty,
+            unit_price: entry.unit,
+            options: {
+              format_code: entry.format.code,
+              format_label: entry.format.label,
+              width_cm: 32,
+              height_cm: 48,
+              photos_count: (photosByFormat[entry.format.code]?.length || 0),
+            },
+          },
+          files: photosByFormat[entry.format.code] || [],
+        }))
+
+      const items = itemEntries.map(entry => entry.item)
+
+      const uploads = items.length
+        ? itemEntries.flatMap((entry, index) =>
+            entry.files.map((file) => {
+              const uploaded = uploadsMap.get(makeFileKey(file))
+              if (uploaded) {
+                return { ...uploaded, item_index: uploaded.item_index ?? index }
+              }
+              return { original_name: file.name, mime_type: file.type, item_index: index }
+            }),
+          )
+        : undefined
 
       const payload = buildOrderPayload({
         contact: { name: fullName.trim(), phone: phone.trim(), email: email.trim() || undefined },
         delivery: { zone, commune, date: deliveryInfo.iso, window: deliveryInfo.window },
         items,
-        // Pour l’instant, on envoie seulement la métadonnée: nombre total de photos par format
-        uploads: undefined,
+        uploads,
         pricing: { subtotal, discount: discountAmount, delivery_fee: delivery, total },
       })
       const res = await api.createOrder(payload)
@@ -239,7 +289,9 @@ export default function MetalPosterPage() {
             </div>
 
             <div className="flex flex-wrap gap-3 items-center">
-              <button type="button" onClick={handleOrder} disabled={!formValid || submitting} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>{submitting ? 'Envoi…' : 'Commander'}</button>
+              <button type="button" onClick={handleOrder} disabled={!formValid || submitting || uploadingFiles} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting && !uploadingFiles ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`}>{submitting ? 'Envoi…' : uploadingFiles ? 'Téléversement…' : 'Commander'}</button>
+              {uploadingFiles && (<div className="text-xs text-slate-600">Téléversement des images en cours… veuillez patienter.</div>)}
+              {uploadError && (<div className="text-xs text-red-600">Un téléversement a échoué ({uploadError}). La commande restera possible mais le fichier concerné devra être envoyé après confirmation.</div>)}
             </div>
           </div>
         </div>

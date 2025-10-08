@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { computeNextDelivery } from '../shared/delivery'
 import { api, isApiConfigured } from '../lib/api/client'
 import { buildOrderPayload } from '../lib/api/buildOrderPayload'
+import { useMultiFileUpload } from '../lib/hooks/useMultiFileUpload'
+import { makeFileKey } from '../lib/uploads'
+import type { OrderUpload } from '../lib/api/types'
 
 type Zone = 1 | 2 | 3
 type Pack = 'pola20' | 'pola20txt'
@@ -67,6 +70,13 @@ export default function PolaroidsPage() {
   // Gestion erreurs affichage
   const [touched, setTouched] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const {
+    registerFiles,
+    unregisterFile,
+    ensureUploaded,
+    uploading: uploadingPhotos,
+    lastError: photosUploadError,
+  } = useMultiFileUpload()
 
   const packPrice = useMemo(() => PRICES[pack], [pack])
   const delivery = useMemo(() => DELIVERY[zone], [zone])
@@ -98,12 +108,17 @@ export default function PolaroidsPage() {
     if (!imgs.length) return
     // éviter doublons par (name+size) et synchroniser les textes par photo
     setPhotos((prev) => {
-      const key = (f: File) => f.name + ':' + f.size
-      const prevTextByKey = new Map(prev.map((f, i) => [key(f), photoTexts[i] || '']))
+      const key = (f: File) => makeFileKey(f)
       const prevKeys = new Set(prev.map(key))
       const newUnique = imgs.filter((f) => !prevKeys.has(key(f)))
+      if (newUnique.length) {
+        registerFiles(newUnique)
+      }
       const merged = [...prev, ...newUnique]
-      setPhotoTexts(merged.map((f) => prevTextByKey.get(key(f)) ?? ''))
+      setPhotoTexts((prevTexts) => {
+        const textByKey = new Map(prev.map((f, i) => [key(f), prevTexts[i] || '']))
+        return merged.map((f) => textByKey.get(key(f)) ?? '')
+      })
       return merged
     })
     // reset input pour pouvoir ré-importer les mêmes noms
@@ -111,8 +126,13 @@ export default function PolaroidsPage() {
   }
 
   const removePhoto = (idx: number) => {
-    setPhotos((prev) => prev.filter((_, i) => i !== idx))
-    setPhotoTexts((prev) => prev.filter((_, i) => i !== idx))
+    setPhotos((prev) => {
+      const target = prev[idx]
+      if (target) unregisterFile(target)
+      const next = prev.filter((_, i) => i !== idx)
+      setPhotoTexts((prevTexts) => prevTexts.filter((_, i) => i !== idx))
+      return next
+    })
   }
 
   const textFilled = useMemo(() => photoTexts.filter((t) => t.trim().length > 0).length, [photoTexts])
@@ -143,7 +163,7 @@ export default function PolaroidsPage() {
 
   const handleOrder = async () => {
     setTouched(true)
-    if (!formValid || submitting) return
+    if (!formValid || submitting || uploadingPhotos) return
     if (!isApiConfigured()) { navigate(confirmationTo); return }
 
     const packLabel = pack === 'pola20' ? 'Pack 20 photos' : 'Pack 20 photos + texte'
@@ -153,6 +173,16 @@ export default function PolaroidsPage() {
 
     try {
       setSubmitting(true)
+      const uploadsMap = photos.length ? await ensureUploaded(photos) : new Map<string, OrderUpload>()
+      const uploads: OrderUpload[] = photos.length
+        ? photos.map((file) => {
+            const uploaded = uploadsMap.get(makeFileKey(file))
+            if (uploaded) {
+              return { ...uploaded, item_index: uploaded.item_index ?? 0 }
+            }
+            return { original_name: file.name, mime_type: file.type, item_index: 0 }
+          })
+        : []
       const payload = buildOrderPayload({
         contact: { name: fullName.trim(), phone: phone.trim(), email: email.trim() || undefined },
         delivery: { zone, commune, date: deliveryInfo.iso, window: deliveryInfo.window },
@@ -176,7 +206,7 @@ export default function PolaroidsPage() {
             },
           },
         ],
-        uploads: photos.length ? photos.map((file) => ({ original_name: file.name, mime_type: file.type })) : undefined,
+        uploads: uploads.length ? uploads : undefined,
         pricing: { subtotal, discount: 0, delivery_fee: delivery, total },
       })
       const res = await api.createOrder(payload)
@@ -449,6 +479,12 @@ export default function PolaroidsPage() {
                 {touched && photos.length < minPhotos && (
                   <div className="mt-2 text-xs text-red-600">Veuillez ajouter au moins {minPhotos} photo(s) (actuellement {photos.length}).</div>
                 )}
+                {uploadingPhotos && (
+                  <div className="mt-2 text-xs text-slate-600">Téléversement des photos en cours… Patientez avant de valider.</div>
+                )}
+                {photosUploadError && (
+                  <div className="mt-2 text-xs text-red-600">Téléversement: {photosUploadError}. Vous pourrez renvoyer les fichiers après confirmation.</div>
+                )}
                 {/* Aperçu */}
                 {photos.length > 0 && (
                   <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
@@ -502,14 +538,18 @@ export default function PolaroidsPage() {
               <button
                 type="button"
                 onClick={handleOrder}
-                disabled={!formValid || submitting}
+                disabled={!formValid || submitting || uploadingPhotos}
                 className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${
-                  formValid && !submitting ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'
+                  formValid && !submitting && !uploadingPhotos ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'
                 }`}
-                aria-disabled={!formValid || submitting}
-                title={!formValid ? 'Ajoutez les photos et complétez vos informations' : 'Passer à la confirmation'}
+                aria-disabled={!formValid || submitting || uploadingPhotos}
+                title={!formValid
+                  ? 'Ajoutez les photos et complétez vos informations'
+                  : uploadingPhotos
+                    ? 'Téléversement en cours… merci de patienter'
+                    : 'Passer à la confirmation'}
               >
-                {submitting ? 'Envoi…' : 'Commander'}
+                {submitting ? 'Envoi…' : uploadingPhotos ? 'Téléversement…' : 'Commander'}
               </button>
               <a href="/Albumphoto" className="rounded-full border border-slate-300 px-5 py-2 text-sm hover:border-slate-400">Album Photo</a>
               <div className="text-xs text-slate-600">Contact: +225 07 87 50 26 37 — Prochaine livraison: <strong>{deliveryInfo.label.split(' ')[0]}</strong> {deliveryInfo.label.split(' ').slice(1).join(' ')} ({deliveryInfo.window})</div>

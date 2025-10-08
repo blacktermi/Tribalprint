@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { COMMUNES, DELIVERY, Zone, computeNextDelivery } from '../shared/delivery'
 import { api, isApiConfigured } from '../lib/api/client'
 import { buildOrderPayload } from '../lib/api/buildOrderPayload'
+import { useMultiFileUpload } from '../lib/hooks/useMultiFileUpload'
+import { makeFileKey } from '../lib/uploads'
 export type ColorMode = 'couleur' | 'noirblanc'
 export type Finish = 'brillant' | 'mat'
 export type Orientation = 'portrait' | 'paysage'
@@ -47,6 +49,7 @@ export default function CategoryBaseForm({ title, productSlug, productLabel, pac
   const [email, setEmail] = useState('')
   const [touched, setTouched] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const { registerFiles, unregisterFile, ensureUploaded: ensureUploadedFiles, uploading: uploadingFiles, lastError: uploadError } = useMultiFileUpload()
 
   const delivery = useMemo(() => DELIVERY[zone], [zone])
   const deliveryInfo = useMemo(() => computeNextDelivery(), [])
@@ -81,13 +84,20 @@ export default function CategoryBaseForm({ title, productSlug, productLabel, pac
       const key = (f: File) => f.name + ':' + f.size
       const prevKeys = new Set(prev.map(key))
       const newUnique = imgs.filter((f) => !prevKeys.has(key(f)))
+      if (newUnique.length) {
+        registerFiles(newUnique)
+      }
       return [...prev, ...newUnique]
     })
     e.currentTarget.value = ''
   }
 
   const removePhoto = (idx: number) => {
-    setPhotos((prev) => prev.filter((_, i) => i !== idx))
+    setPhotos((prev) => {
+      const target = prev[idx]
+      if (target) unregisterFile(target)
+      return prev.filter((_, i) => i !== idx)
+    })
   }
 
   const confirmationTo = useMemo(() => {
@@ -129,6 +139,17 @@ export default function CategoryBaseForm({ title, productSlug, productLabel, pac
     }
     try {
       setSubmitting(true)
+      const uploadsMap = await ensureUploadedFiles(photos)
+      const uploads = photos.length
+        ? photos.map((file) => {
+            const key = makeFileKey(file)
+            const uploaded = uploadsMap.get(key)
+            if (uploaded) {
+              return { ...uploaded, item_index: uploaded.item_index ?? 0 }
+            }
+            return { original_name: file.name, mime_type: file.type, item_index: 0 }
+          })
+        : undefined
       const payload = buildOrderPayload({
         contact: { name: fullName.trim(), phone: phone.trim(), email: email.trim() || undefined },
         delivery: { zone, commune, date: deliveryInfo.iso, window: deliveryInfo.window },
@@ -150,7 +171,7 @@ export default function CategoryBaseForm({ title, productSlug, productLabel, pac
             },
           },
         ],
-        uploads: photos.length ? photos.map((f) => ({ original_name: f.name, mime_type: f.type })) : undefined,
+        uploads,
         pricing: { subtotal, discount: discountAmount, delivery_fee: delivery, total },
       })
       const res = await api.createOrder(payload)
@@ -320,9 +341,11 @@ export default function CategoryBaseForm({ title, productSlug, productLabel, pac
             </div>
 
             <div className="flex flex-wrap gap-3 items-center">
-              <button type="button" onClick={handleOrder} disabled={!formValid || submitting} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`} aria-disabled={!formValid || submitting} title={!formValid ? 'Ajoutez les photos et complétez vos informations' : 'Passer à la confirmation'}>
+              <button type="button" onClick={handleOrder} disabled={!formValid || submitting || uploadingFiles} className={`inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-white ${formValid && !submitting && !uploadingFiles ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed'}`} aria-disabled={!formValid || submitting || uploadingFiles} title={!formValid ? 'Ajoutez les photos et complétez vos informations' : uploadingFiles ? 'Téléversement en cours…' : 'Passer à la confirmation'}>
                 {submitting ? 'Envoi…' : 'Commander'}
               </button>
+              {uploadingFiles && <div className="text-xs text-slate-600">Téléversement des photos… Patientez avant de valider.</div>}
+              {uploadError && <div className="text-xs text-red-600">Un téléversement a échoué: {uploadError}. Vous pouvez réessayer ou continuer — la commande inclura quand même les références des fichiers.</div>}
               <div className="text-xs text-slate-600">Contact: +225 07 87 50 26 37 — Livraison Mercredi & Samedi ({deliveryInfo.window})</div>
             </div>
           </div>
